@@ -20,6 +20,7 @@
 		2B1AC028185E81490065CD8B /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2B1AC026185E81490065CD8B /* InfoPlist.strings */; };
 		2B1AC02A185E81490065CD8B /* TSNetworkingTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1AC029185E81490065CD8B /* TSNetworkingTests.m */; };
 		2B1AC039185E83110065CD8B /* TSNetworking.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1AC038185E83110065CD8B /* TSNetworking.m */; };
+		2B58463C185FC4D100E1C028 /* NSError+Factory.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B58463B185FC4D100E1C028 /* NSError+Factory.m */; };
 		2B5E19A7185EB3FB005294DC /* Base64.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B5E19A6185EB3FB005294DC /* Base64.m */; };
 		2B5E19AA185ECA32005294DC /* AFSecurityPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B5E19A9185ECA32005294DC /* AFSecurityPolicy.m */; };
 /* End PBXBuildFile section */
@@ -53,6 +54,8 @@
 		2B1AC029185E81490065CD8B /* TSNetworkingTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = TSNetworkingTests.m; sourceTree = "<group>"; };
 		2B1AC037185E83110065CD8B /* TSNetworking.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TSNetworking.h; sourceTree = "<group>"; };
 		2B1AC038185E83110065CD8B /* TSNetworking.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TSNetworking.m; sourceTree = "<group>"; };
+		2B58463A185FC4D100E1C028 /* NSError+Factory.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSError+Factory.h"; sourceTree = "<group>"; };
+		2B58463B185FC4D100E1C028 /* NSError+Factory.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSError+Factory.m"; sourceTree = "<group>"; };
 		2B5E19A5185EB3FB005294DC /* Base64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Base64.h; sourceTree = "<group>"; };
 		2B5E19A6185EB3FB005294DC /* Base64.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Base64.m; sourceTree = "<group>"; };
 		2B5E19A8185ECA32005294DC /* AFSecurityPolicy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFSecurityPolicy.h; sourceTree = "<group>"; };
@@ -163,6 +166,8 @@
 				2B1AC038185E83110065CD8B /* TSNetworking.m */,
 				2B5E19A8185ECA32005294DC /* AFSecurityPolicy.h */,
 				2B5E19A9185ECA32005294DC /* AFSecurityPolicy.m */,
+				2B58463A185FC4D100E1C028 /* NSError+Factory.h */,
+				2B58463B185FC4D100E1C028 /* NSError+Factory.m */,
 			);
 			path = TSNetworking;
 			sourceTree = "<group>";
@@ -262,6 +267,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B58463C185FC4D100E1C028 /* NSError+Factory.m in Sources */,
 				2B5E19A7185EB3FB005294DC /* Base64.m in Sources */,
 				2B5E19AA185ECA32005294DC /* AFSecurityPolicy.m in Sources */,
 				2B1AC039185E83110065CD8B /* TSNetworking.m in Sources */,

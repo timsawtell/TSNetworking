@@ -19,9 +19,9 @@
 - (void)setUp
 {
     [super setUp];
-    self.semaphore = dispatch_semaphore_create(0);
     self.baseURLString = @"http://localhost:8080";
     [[TSNetworking sharedSession] setBaseURLString:self.baseURLString];
+    [[TSNetworking sharedSession] setBasicAuthUsername:nil withPassword:nil];
 }
 
 - (void)tearDown
@@ -30,116 +30,127 @@
     [super tearDown];
 }
 
+- (void)signalFinished:(NSCondition *)condition
+{
+    [condition lock];
+    [condition signal];
+    [condition unlock];
+}
+
 #pragma mark - GET
 
 - (void)testGet
 {
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof (self) weakSelf = self;
+    
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(resultObject, @"nil result obj");
-        NSLog(@"testGet successBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    TSNetworkErrorBlock errorBlock = ^(NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
-        NSLog(@"testGet errorBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
-    
-    [[TSNetworking sharedSession] URLOperationWithPath:nil
+
+    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
                                             withMethod:HTTP_METHOD_GET
                                         withParameters:nil
                                            withSuccess:successBlock
                                              withError:errorBlock];
-    
-    while (dispatch_semaphore_wait(self.semaphore, DISPATCH_TIME_NOW)) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
-    }
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
 }
 
 - (void)testGetWithPameters
 {
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof (self) weakSelf = self;
+    
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(resultObject, @"nil result obj");
-        NSString *shouldBeString = [NSString stringWithFormat:@"%@?key=value", self.baseURLString];
+        NSString *shouldBeString = [NSString stringWithFormat:@"%@?key=value", weakSelf.baseURLString];
         XCTAssertTrue([[request.URL absoluteString] isEqualToString:shouldBeString]);
-        NSLog(@"testGetWithPameters successBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    TSNetworkErrorBlock errorBlock = ^(NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
-        NSLog(@"testGetWithPameters errorBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] URLOperationWithPath:nil
+    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
                                             withMethod:HTTP_METHOD_GET
                                         withParameters:@{@"key": @"value"}
                                            withSuccess:successBlock
                                              withError:errorBlock];
     
-    while (dispatch_semaphore_wait(self.semaphore, DISPATCH_TIME_NOW)) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
-    }
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
 }
 
 - (void)testGetWithUsernameAndPassword
+
 {
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(resultObject, @"nil result obj");
         NSDictionary *headers = [request allHTTPHeaderFields];
         XCTAssertNotNil([headers valueForKey:@"Authorization"], @"auth missing");
-        NSLog(@"testGetWithUsernameAndPassword successBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    TSNetworkErrorBlock errorBlock = ^(NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
-        NSLog(@"testGetWithUsernameAndPassword errorBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] setBasicAuthUsername:@"tim" withPassword:@"password"];
+    [[TSNetworking sharedSession] setBasicAuthUsername:@"hack" withPassword:@"thegibson"];
     
-    [[TSNetworking sharedSession] URLOperationWithPath:nil
+    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
                                             withMethod:HTTP_METHOD_GET
                                         withParameters:nil
                                            withSuccess:successBlock
                                              withError:errorBlock];
     
-    while (dispatch_semaphore_wait(self.semaphore, DISPATCH_TIME_NOW)) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
-    }
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
 }
 
 #pragma mark - POST
 
 - (void)testPostWithPameters
 {
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(resultObject, @"nil result obj");
-        NSLog(@"testPostWithPameters successBlock");
         NSString *string = [[NSString alloc] initWithData:request.HTTPBody encoding:NSUTF8StringEncoding];
         XCTAssertNotNil(string, @"request body had no content");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    TSNetworkErrorBlock errorBlock = ^(NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
-        NSLog(@"testPostWithPameters errorBlock");
-        dispatch_semaphore_signal(self.semaphore);
+        [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] URLOperationWithPath:nil
+    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
                                             withMethod:HTTP_METHOD_POST
                                         withParameters:@{@"key": @"value"}
                                            withSuccess:successBlock
                                              withError:errorBlock];
     
-    while (dispatch_semaphore_wait(self.semaphore, DISPATCH_TIME_NOW)) {
-        [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantFuture]];
-    }
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
 }
 
 @end

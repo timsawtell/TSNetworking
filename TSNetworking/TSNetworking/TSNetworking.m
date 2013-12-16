@@ -8,13 +8,15 @@
 
 #import "TSNetworking.h"
 #import "Base64.h"
+#import "NSError+Factory.h"
 
-typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSError *error);
+typedef void(^URLSessionTaskCompletion)(NSData *data, NSURLResponse *response, NSError *error);
+typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSURLResponse *response, NSError *error);
 
 @interface TSNetworking()
 
 @property (nonatomic, strong) NSURLSessionConfiguration *defaultConfiguration;
-@property (nonatomic, strong) NSURLSession *sharedSession;
+@property (nonatomic, strong) NSURLSession *sharedURLSession;
 @property (nonatomic, strong) NSURL *baseURL;
 @property (nonatomic, copy) NSString *username;
 @property (nonatomic, copy) NSString *password;
@@ -35,7 +37,7 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
         [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Accept": @"application/json"}];
         [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Content-Type": @"application/json"}];
         
-        _sharedSession = [NSURLSession sessionWithConfiguration:_defaultConfiguration
+        _sharedURLSession = [NSURLSession sessionWithConfiguration:_defaultConfiguration
                                                       delegate:self
                                                  delegateQueue:nil];
         
@@ -47,12 +49,11 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
 
 + (TSNetworking*)sharedSession
 {
-    static TSNetworking* sharedSession = nil;
-    @synchronized(self) {
-        if (sharedSession == nil) {
-            sharedSession = [[TSNetworking alloc] init];
-        }
-    }
+    static dispatch_once_t once;
+    static TSNetworking *sharedSession;
+    dispatch_once(&once, ^{
+        sharedSession = [[self alloc] init];
+    });
     return sharedSession;
 }
 
@@ -72,11 +73,11 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
  * Public Interface 
  * The programmer calls this method 
  */
-- (void)URLOperationWithPath:(NSString *)path
-                  withMethod:(HTTP_METHOD)method
-              withParameters:(NSDictionary *)parameters
-                 withSuccess:(TSNetworkSuccessBlock)successBlock
-                   withError:(TSNetworkErrorBlock)errorBlock
+- (void)URLOperationWithRelativePath:(NSString *)path
+                          withMethod:(HTTP_METHOD)method
+                      withParameters:(NSDictionary *)parameters
+                         withSuccess:(TSNetworkSuccessBlock)successBlock
+                           withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(nil != self.baseURL, @"Base URL is nil");
     
@@ -142,17 +143,71 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
         }
     }
     
-    [[self URLOperationWithRequest:request
+    [[self dataTaskWithRequest:request
                       withSuccess:successBlock
                         withError:errorBlock] resume];
 }
 
+- (void)downloadFromFullPath:(NSString *)path
+                      toPath:(NSString *)destinationPath
+                 withSuccess:(TSNetworkSuccessBlock)successBlock
+                   withError:(TSNetworkErrorBlock)errorBlock
+{
+    NSAssert(nil != path && nil != destinationPath, @"paths were not set up");
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:path]];
+    __weak typeof(request) weakRequest = request;
+    __weak typeof(self) weakSelf = self;
+    URLSessionDownloadTaskCompletion completion = ^(NSURL *location, NSURLResponse *response, NSError *error) {
+        if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
+            [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
+        }
+        if (nil != error) {
+            errorBlock(nil, error, weakRequest, response);
+            return;
+        }
+        
+        // does this file exist?
+        NSFileManager *fm = [NSFileManager new];
+        if (![fm fileExistsAtPath:location.absoluteString isDirectory:NO]) {
+            // aint this some shit, it finished without error, but the file is not available at location
+            NSString *text = NSLocalizedStringFromTable(@"Unable to locate downloaded file", @"TSNetworking", nil);
+            error = [NSError errorWithDomain:NSURLErrorDomain
+                                    withCode:NSURLErrorCannotOpenFile
+                                    withText:text];
+            errorBlock(nil, error, weakRequest, response);
+            return;
+        }
+        
+        // move the file to the programmers destination
+        error = nil;
+        [fm moveItemAtPath:location.absoluteString toPath:destinationPath error:&error];
+        if (nil != error) {
+            // son of a bitch
+            NSString *text = NSLocalizedStringFromTable(@"Unable to move file", @"TSNetworking", nil);
+            error = [NSError errorWithDomain:NSURLErrorDomain
+                                    withCode:NSURLErrorCannotMoveFile
+                                    withText:text];
+            errorBlock(nil, error, weakRequest, response);
+            return;
+        }
+        
+        // all worked as intended
+        successBlock(nil, weakRequest, response);
+    };
+    
+    NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithRequest:request
+                                                                          completionHandler:completion];
+    [downloadTask resume];
+}
+
 /**
- * Generate a SessionDataTask based on the request and completion handlers
+ * Generate a SessionDataTask based on the request and completion handlers.
+ * Both the success and error blocks will contain a parsedObject, being eithert the HTML as a string,
+ * JSON data as a dictionary or binary data as NSData or blah de blah
  */
-- (NSURLSessionDataTask *)URLOperationWithRequest:(NSMutableURLRequest *)request
-                                      withSuccess:(TSNetworkSuccessBlock)successBlock
-                                        withError:(TSNetworkErrorBlock)errorBlock
+- (NSURLSessionDataTask *)dataTaskWithRequest:(NSMutableURLRequest *)request
+                                  withSuccess:(TSNetworkSuccessBlock)successBlock
+                                    withError:(TSNetworkErrorBlock)errorBlock
 {
     if (nil != self.username && nil != self.password) {
         NSString *base64EncodedString = [[NSString stringWithFormat:@"%@:%@", self.username, self.password] base64EncodedString];
@@ -160,12 +215,8 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
         [request setValue:valueString forHTTPHeaderField:@"Authorization"];
     }
     __weak typeof(request) weakRequest = request;
-    URLSessionCompletion completion = ^(NSData *data, NSURLResponse *response, NSError *error) {
-        [self validateResponse:(NSHTTPURLResponse *)response error:&error];
-        if (nil != error) {
-            errorBlock(error, weakRequest, response);
-            return;
-        }
+    __weak typeof(self) weakSelf = self;
+    URLSessionTaskCompletion completion = ^(NSData *data, NSURLResponse *response, NSError *error) {
         NSString *contentType;
         
         if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
@@ -180,13 +231,25 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
                 }
             }
         }
+        // if there is no result data, and there is an error, make the parsed object the error's localizedDescription
+        NSObject *parsedObject;
+        if (nil != error && (nil == data || data.length <= 0)) {
+            parsedObject = error.localizedDescription;
+        } else {
+            parsedObject = [self resultBasedOnContentType:contentType
+                                                 fromData:data];
+        }
         
-        NSObject *parsedObject = [self resultBasedOnContentType:contentType
-                                                       fromData:data];
+        [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
+        if (nil != error) {
+            errorBlock(parsedObject, error, weakRequest, response);
+            return;
+        }
+        
         successBlock(parsedObject, weakRequest, response);
     };
     
-    NSURLSessionDataTask *task = [self.sharedSession dataTaskWithRequest:request
+    NSURLSessionDataTask *task = [self.sharedURLSession dataTaskWithRequest:request
                                                        completionHandler:completion];
     return task;
 }
@@ -232,21 +295,17 @@ typedef void(^URLSessionCompletion)(NSData *data, NSURLResponse *response, NSErr
 {
     if (response && [response isKindOfClass:[NSHTTPURLResponse class]]) {
         if (self.acceptableStatusCodes && ![self.acceptableStatusCodes containsIndex:(NSUInteger)response.statusCode]) {
-            NSDictionary *userInfo = @{
-                                       NSLocalizedDescriptionKey: [NSString stringWithFormat:NSLocalizedStringFromTable(@"Request failed: %@ (%d)", @"TSNetworking", nil), [NSHTTPURLResponse localizedStringForStatusCode:response.statusCode], response.statusCode],
-                                       NSURLErrorFailingURLErrorKey:[response URL]
-                                       };
+            NSString *text = [NSString stringWithFormat:NSLocalizedStringFromTable(@"Request failed: %@ (%d)", @"TSNetworking", nil), [NSHTTPURLResponse localizedStringForStatusCode:response.statusCode], response.statusCode];
             if (error) {
-                *error = [[NSError alloc] initWithDomain:@"TSNetworkingErrorDomain" code:NSURLErrorBadServerResponse userInfo:userInfo];
+                *error = [NSError errorWithDomain:NSURLErrorDomain
+                                         withCode:response.statusCode
+                                         withText:text];
             }
-            
             return NO;
         }
     }
-    
     return YES;
 }
-
 
 #pragma mark - NSURLSessionTaskDelegate
 

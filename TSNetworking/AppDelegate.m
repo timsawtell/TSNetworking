@@ -17,23 +17,25 @@
     // Override point for customization after application launch.
     self.window.backgroundColor = [UIColor whiteColor];
     [self.window makeKeyAndVisible];
-    
+
+    /*
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
-        NSLog(@"testGetWithUsernameAndPassword successBlock");
+        NSLog(@"%@", resultObject);
     };
     
-    TSNetworkErrorBlock errorBlock = ^(NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         NSLog(@"%@", error.localizedDescription);
     };
     
     [[TSNetworking sharedSession] setBaseURLString:@"http://localhost:8080"];
-    [[TSNetworking sharedSession] setBasicAuthUsername:@"tim" withPassword:@"password"];
+    [[TSNetworking sharedSession] setBasicAuthUsername:@"hack" withPassword:@"thegibsond"];
     
     [[TSNetworking sharedSession] URLOperationWithPath:nil
                                             withMethod:HTTP_METHOD_GET
                                         withParameters:nil
                                            withSuccess:successBlock
                                              withError:errorBlock];
+     */
     
     return YES;
 }
