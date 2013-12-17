@@ -312,7 +312,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         }
         
         // all worked as intended
-        successBlock(nil, weakRequest, nil);
+        successBlock(location, weakRequest, nil);
     };
     
     NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithRequest:request
