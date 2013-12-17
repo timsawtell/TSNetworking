@@ -22,6 +22,8 @@
     self.baseURLString = @"http://localhost:8080";
     [[TSNetworking sharedSession] setBaseURLString:self.baseURLString];
     [[TSNetworking sharedSession] setBasicAuthUsername:nil withPassword:nil];
+    [[TSNetworking backgroundSession] setBaseURLString:self.baseURLString];
+    [[TSNetworking backgroundSession] setBasicAuthUsername:nil withPassword:nil];
 }
 
 - (void)tearDown
@@ -55,11 +57,11 @@
         [weakSelf signalFinished:completed];
     };
 
-    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
-                                            withMethod:HTTP_METHOD_GET
-                                        withParameters:nil
-                                           withSuccess:successBlock
-                                             withError:errorBlock];
+    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
+                                                    withMethod:HTTP_METHOD_GET
+                                                withParameters:nil
+                                                   withSuccess:successBlock
+                                                     withError:errorBlock];
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
 }
@@ -82,11 +84,11 @@
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
-                                            withMethod:HTTP_METHOD_GET
-                                        withParameters:@{@"key": @"value"}
-                                           withSuccess:successBlock
-                                             withError:errorBlock];
+    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
+                                                    withMethod:HTTP_METHOD_GET
+                                                withParameters:@{@"key": @"value"}
+                                                   withSuccess:successBlock
+                                                     withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -113,11 +115,11 @@
     
     [[TSNetworking sharedSession] setBasicAuthUsername:@"hack" withPassword:@"thegibson"];
     
-    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
-                                            withMethod:HTTP_METHOD_GET
-                                        withParameters:nil
-                                           withSuccess:successBlock
-                                             withError:errorBlock];
+    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
+                                                    withMethod:HTTP_METHOD_GET
+                                                withParameters:nil
+                                                   withSuccess:successBlock
+                                                     withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -143,11 +145,84 @@
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] URLOperationWithRelativePath:nil
-                                            withMethod:HTTP_METHOD_POST
-                                        withParameters:@{@"key": @"value"}
-                                           withSuccess:successBlock
-                                             withError:errorBlock];
+    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
+                                                    withMethod:HTTP_METHOD_POST
+                                                withParameters:@{@"key": @"value"}
+                                                   withSuccess:successBlock
+                                                     withError:errorBlock];
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+#pragma mark - Download
+
+- (void)testDownloadFile
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
+    NSString *destinationPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    destinationPath = [destinationPath stringByAppendingPathComponent:@"1mb.mp4"];
+    
+    __block NSFileManager *fm = [NSFileManager new];
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
+        [weakSelf signalFinished:completed];
+        [fm removeItemAtPath:destinationPath error:nil];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(error, @"nil error obj");
+        NSLog(@"%@", error.localizedDescription);
+        [weakSelf signalFinished:completed];
+        [fm removeItemAtPath:destinationPath error:&error];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"Download written: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    };
+    
+    [[TSNetworking backgroundSession] downloadFromFullPath:@"https://archive.org/download/1mbFile/1mb.mp4"
+                                                    toPath:destinationPath
+                                         withProgressBlock:progressBlock
+                                               withSuccess:successBlock
+                                                 withError:errorBlock];
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+#pragma mark - Upload
+
+- (void)testUpload
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
+    NSString *sourcePath = [[NSBundle mainBundle] pathForResource:@"ourLord" ofType:@"jpg"];
+    XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    };
+    
+    [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
+                                                  toPath:@"http://localhost:8080"
+                                       withProgressBlock:progressBlock
+                                             withSuccess:successBlock
+                                               withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];

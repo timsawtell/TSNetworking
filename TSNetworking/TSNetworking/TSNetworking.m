@@ -1,17 +1,24 @@
-//
-//  TSNetworking.m
-//  TSNetworking
-//
-//  Created by Tim Sawtell on 16/12/2013.
-//  Copyright (c) 2013 Sawtell Software. All rights reserved.
-//
+/*
+ Copyright (c) 2013 Tim Sawtell
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ IN THE SOFTWARE.
+ */
 
 #import "TSNetworking.h"
 #import "Base64.h"
 #import "NSError+Factory.h"
 
 typedef void(^URLSessionTaskCompletion)(NSData *data, NSURLResponse *response, NSError *error);
-typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSURLResponse *response, NSError *error);
+typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error);
 
 @interface TSNetworking()
 
@@ -21,21 +28,36 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSURLResponse *
 @property (nonatomic, copy) NSString *username;
 @property (nonatomic, copy) NSString *password;
 @property (nonatomic, strong) NSIndexSet *acceptableStatusCodes;
+@property (nonatomic, strong) NSMutableDictionary *downloadTaskProgressBlocks; //blame c̶a̶n̶a̶d̶a̶ apple
+@property (nonatomic, strong) NSMutableDictionary *downloadCompletedBlocks; //blame c̶a̶n̶a̶d̶a̶ apple
+@property (nonatomic, strong) NSMutableDictionary *uploadCompletedBlocks;
+@property (nonatomic, strong) NSMutableDictionary *uploadProgressBlocks;
+@property (nonatomic) BOOL isBackgroundConfig;
+
 @end
 
 @implementation TSNetworking
 
-- (id)init
+- (id)initWithBackground:(BOOL)background
 {
     self = [super init];
     if (self) {
-        _defaultConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+        if (background) {
+            _defaultConfiguration = [NSURLSessionConfiguration backgroundSessionConfiguration:@"backgroundSession"];
+            _defaultConfiguration.HTTPMaximumConnectionsPerHost = 2;
+            _downloadTaskProgressBlocks = [NSMutableDictionary dictionary];
+            _downloadCompletedBlocks = [NSMutableDictionary dictionary];
+            _uploadCompletedBlocks = [NSMutableDictionary dictionary];
+            _uploadProgressBlocks = [NSMutableDictionary dictionary];
+        } else {
+            _defaultConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
+            [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Accept": @"application/json"}];
+            [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Content-Type": @"application/json"}];
+            _defaultConfiguration.HTTPMaximumConnectionsPerHost = 1;
+        }
         _defaultConfiguration.allowsCellularAccess = YES;
         _defaultConfiguration.timeoutIntervalForRequest = 30.0;
         _defaultConfiguration.timeoutIntervalForResource = 30.0;
-        _defaultConfiguration.HTTPMaximumConnectionsPerHost = 1;
-        [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Accept": @"application/json"}];
-        [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Content-Type": @"application/json"}];
         
         _sharedURLSession = [NSURLSession sessionWithConfiguration:_defaultConfiguration
                                                       delegate:self
@@ -43,215 +65,9 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSURLResponse *
         
         _securityPolicy = [AFSecurityPolicy defaultPolicy];
         _acceptableStatusCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
+        _isBackgroundConfig = background;
     }
     return self;
-}
-
-+ (TSNetworking*)sharedSession
-{
-    static dispatch_once_t once;
-    static TSNetworking *sharedSession;
-    dispatch_once(&once, ^{
-        sharedSession = [[self alloc] init];
-    });
-    return sharedSession;
-}
-
-- (void)setBaseURLString:(NSString *)baseURLString
-{
-    self.baseURL = [NSURL URLWithString:baseURLString];
-}
-
-- (void)setBasicAuthUsername:(NSString *)username
-                withPassword:(NSString *)password
-{
-    self.username = username;
-    self.password = password;
-}
-
-/*
- * Public Interface 
- * The programmer calls this method 
- */
-- (void)URLOperationWithRelativePath:(NSString *)path
-                          withMethod:(HTTP_METHOD)method
-                      withParameters:(NSDictionary *)parameters
-                         withSuccess:(TSNetworkSuccessBlock)successBlock
-                           withError:(TSNetworkErrorBlock)errorBlock
-{
-    NSAssert(nil != self.baseURL, @"Base URL is nil");
-    
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:self.baseURL
-                                                           cachePolicy:NSURLRequestReloadIgnoringCacheData
-                                                       timeoutInterval:self.defaultConfiguration.timeoutIntervalForRequest];
-    NSString *setMethod;
-    switch (method) {
-        case HTTP_METHOD_POST:
-            setMethod = @"POST";break;
-        case HTTP_METHOD_GET:
-            setMethod = @"GET";break;
-        case HTTP_METHOD_PUT:
-            setMethod = @"PUT";break;
-        case HTTP_METHOD_HEAD:
-            setMethod = @"HEAD";break;
-        case HTTP_METHOD_DELETE:
-            setMethod = @"DELETE";break;
-        case HTTP_METHOD_TRACE:
-            setMethod = @"TRACE";break;
-        case HTTP_METHOD_CONNECT:
-            setMethod = @"CONNECT";break;
-        case HTTP_METHOD_PATCH:
-            setMethod = @"PATCH";break;
-        default:
-            setMethod = @"GET";break;
-    }
-    [request setHTTPMethod:setMethod];
-    
-    // parameters (for adding to the query string if GET, or adding to the body if POST
-    if (nil != parameters) {
-        switch (method) {
-            case HTTP_METHOD_POST:
-            case HTTP_METHOD_PUT:
-            case HTTP_METHOD_PATCH:
-            {
-                NSError *error;
-                NSData *jsonData = [NSJSONSerialization dataWithJSONObject:parameters
-                                                                   options:NSJSONWritingPrettyPrinted
-                                                                     error:&error];
-                if (jsonData) {
-                    [request setHTTPBody:jsonData];
-                }
-            }
-            break;
-                
-            default:
-            {
-                NSString *urlString = [request.URL absoluteString];
-                NSRange range = [urlString rangeOfString:@"?"];
-                BOOL addQMark = (range.location == NSNotFound);
-                for (NSString *key in parameters) {
-                    if (addQMark) {
-                        urlString = [urlString stringByAppendingFormat:@"?%@=%@", key, [parameters valueForKey:key]];
-                        addQMark = NO;
-                    } else {
-                        urlString = [urlString stringByAppendingFormat:@"&%@=%@", key, [parameters valueForKey:key]];
-                    }
-                }
-                [request setURL:[NSURL URLWithString:urlString]];
-            }
-            break;
-        }
-    }
-    
-    [[self dataTaskWithRequest:request
-                      withSuccess:successBlock
-                        withError:errorBlock] resume];
-}
-
-- (void)downloadFromFullPath:(NSString *)path
-                      toPath:(NSString *)destinationPath
-                 withSuccess:(TSNetworkSuccessBlock)successBlock
-                   withError:(TSNetworkErrorBlock)errorBlock
-{
-    NSAssert(nil != path && nil != destinationPath, @"paths were not set up");
-    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:path]];
-    __weak typeof(request) weakRequest = request;
-    __weak typeof(self) weakSelf = self;
-    URLSessionDownloadTaskCompletion completion = ^(NSURL *location, NSURLResponse *response, NSError *error) {
-        if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
-            [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
-        }
-        if (nil != error) {
-            errorBlock(nil, error, weakRequest, response);
-            return;
-        }
-        
-        // does this file exist?
-        NSFileManager *fm = [NSFileManager new];
-        if (![fm fileExistsAtPath:location.absoluteString isDirectory:NO]) {
-            // aint this some shit, it finished without error, but the file is not available at location
-            NSString *text = NSLocalizedStringFromTable(@"Unable to locate downloaded file", @"TSNetworking", nil);
-            error = [NSError errorWithDomain:NSURLErrorDomain
-                                    withCode:NSURLErrorCannotOpenFile
-                                    withText:text];
-            errorBlock(nil, error, weakRequest, response);
-            return;
-        }
-        
-        // move the file to the programmers destination
-        error = nil;
-        [fm moveItemAtPath:location.absoluteString toPath:destinationPath error:&error];
-        if (nil != error) {
-            // son of a bitch
-            NSString *text = NSLocalizedStringFromTable(@"Unable to move file", @"TSNetworking", nil);
-            error = [NSError errorWithDomain:NSURLErrorDomain
-                                    withCode:NSURLErrorCannotMoveFile
-                                    withText:text];
-            errorBlock(nil, error, weakRequest, response);
-            return;
-        }
-        
-        // all worked as intended
-        successBlock(nil, weakRequest, response);
-    };
-    
-    NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithRequest:request
-                                                                          completionHandler:completion];
-    [downloadTask resume];
-}
-
-/**
- * Generate a SessionDataTask based on the request and completion handlers.
- * Both the success and error blocks will contain a parsedObject, being eithert the HTML as a string,
- * JSON data as a dictionary or binary data as NSData or blah de blah
- */
-- (NSURLSessionDataTask *)dataTaskWithRequest:(NSMutableURLRequest *)request
-                                  withSuccess:(TSNetworkSuccessBlock)successBlock
-                                    withError:(TSNetworkErrorBlock)errorBlock
-{
-    if (nil != self.username && nil != self.password) {
-        NSString *base64EncodedString = [[NSString stringWithFormat:@"%@:%@", self.username, self.password] base64EncodedString];
-        NSString *valueString = [NSString stringWithFormat:@"Basic %@", base64EncodedString];
-        [request setValue:valueString forHTTPHeaderField:@"Authorization"];
-    }
-    __weak typeof(request) weakRequest = request;
-    __weak typeof(self) weakSelf = self;
-    URLSessionTaskCompletion completion = ^(NSData *data, NSURLResponse *response, NSError *error) {
-        NSString *contentType;
-        
-        if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
-            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
-            NSDictionary *responseHeaders = [httpResponse allHeaderFields];
-            ASSIGN_NOT_NIL(contentType, [responseHeaders valueForKey:@"Content-Type"]);
-            if (nil != contentType) {
-                contentType = [contentType lowercaseString];
-                NSRange indexOfSemi = [contentType rangeOfString:@";"];
-                if (indexOfSemi.location != NSNotFound) {
-                    contentType = [contentType substringToIndex:indexOfSemi.location];
-                }
-            }
-        }
-        // if there is no result data, and there is an error, make the parsed object the error's localizedDescription
-        NSObject *parsedObject;
-        if (nil != error && (nil == data || data.length <= 0)) {
-            parsedObject = error.localizedDescription;
-        } else {
-            parsedObject = [self resultBasedOnContentType:contentType
-                                                 fromData:data];
-        }
-        
-        [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
-        if (nil != error) {
-            errorBlock(parsedObject, error, weakRequest, response);
-            return;
-        }
-        
-        successBlock(parsedObject, weakRequest, response);
-    };
-    
-    NSURLSessionDataTask *task = [self.sharedURLSession dataTaskWithRequest:request
-                                                       completionHandler:completion];
-    return task;
 }
 
 /**
@@ -307,6 +123,282 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSURLResponse *
     return YES;
 }
 
+#pragma mark - Public Methods
+
++ (TSNetworking *)sharedSession
+{
+    static dispatch_once_t once;
+    static TSNetworking *sharedSession;
+    dispatch_once(&once, ^{
+        sharedSession = [[self alloc] initWithBackground:NO];
+    });
+    return sharedSession;
+}
+
++ (TSNetworking *)backgroundSession
+{
+    static dispatch_once_t once;
+    static TSNetworking *backgroundSession;
+    dispatch_once(&once, ^{
+        backgroundSession = [[self alloc] initWithBackground:YES];
+    });
+    return backgroundSession;
+}
+
+- (void)setBaseURLString:(NSString *)baseURLString
+{
+    self.baseURL = [NSURL URLWithString:baseURLString];
+}
+
+- (void)setBasicAuthUsername:(NSString *)username
+                withPassword:(NSString *)password
+{
+    self.username = username;
+    self.password = password;
+}
+
+/*
+ * Perform a HTTP operation.
+ */
+- (void)performURLOperationWithRelativePath:(NSString *)path
+                                 withMethod:(HTTP_METHOD)method
+                             withParameters:(NSDictionary *)parameters
+                                withSuccess:(TSNetworkSuccessBlock)successBlock
+                                  withError:(TSNetworkErrorBlock)errorBlock
+{
+    NSAssert(nil != self.baseURL, @"Base URL is nil");
+    NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
+    
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:self.baseURL
+                                                           cachePolicy:NSURLRequestReloadIgnoringCacheData
+                                                       timeoutInterval:self.defaultConfiguration.timeoutIntervalForRequest];
+    NSString *setMethod;
+    switch (method) {
+        case HTTP_METHOD_POST: setMethod = @"POST"; break;
+        case HTTP_METHOD_GET: setMethod = @"GET"; break;
+        case HTTP_METHOD_PUT: setMethod = @"PUT"; break;
+        case HTTP_METHOD_HEAD: setMethod = @"HEAD"; break;
+        case HTTP_METHOD_DELETE: setMethod = @"DELETE"; break;
+        case HTTP_METHOD_TRACE: setMethod = @"TRACE"; break;
+        case HTTP_METHOD_CONNECT: setMethod = @"CONNECT"; break;
+        case HTTP_METHOD_PATCH: setMethod = @"PATCH"; break;
+        default: setMethod = @"GET";break;
+    }
+    [request setHTTPMethod:setMethod];
+    
+    // parameters (for adding to the query string if GET, or adding to the body if POST
+    if (nil != parameters) {
+        switch (method) {
+            case HTTP_METHOD_POST:
+            case HTTP_METHOD_PUT:
+            case HTTP_METHOD_PATCH:
+            {
+                NSError *error;
+                NSData *jsonData = [NSJSONSerialization dataWithJSONObject:parameters
+                                                                   options:NSJSONWritingPrettyPrinted
+                                                                     error:&error];
+                if (jsonData) {
+                    [request setHTTPBody:jsonData];
+                }
+            }
+                break;
+                
+            default:
+            {
+                NSString *urlString = [request.URL absoluteString];
+                NSRange range = [urlString rangeOfString:@"?"];
+                BOOL addQMark = (range.location == NSNotFound);
+                for (NSString *key in parameters) {
+                    if (addQMark) {
+                        urlString = [urlString stringByAppendingFormat:@"?%@=%@", key, [parameters valueForKey:key]];
+                        addQMark = NO;
+                    } else {
+                        urlString = [urlString stringByAppendingFormat:@"&%@=%@", key, [parameters valueForKey:key]];
+                    }
+                }
+                [request setURL:[NSURL URLWithString:urlString]];
+            }
+                break;
+        }
+    }
+    
+    if (nil != self.username && nil != self.password) {
+        NSString *base64EncodedString = [[NSString stringWithFormat:@"%@:%@", self.username, self.password] base64EncodedString];
+        NSString *valueString = [NSString stringWithFormat:@"Basic %@", base64EncodedString];
+        [request setValue:valueString forHTTPHeaderField:@"Authorization"];
+    }
+    __weak typeof(request) weakRequest = request;
+    __weak typeof(self) weakSelf = self;
+    URLSessionTaskCompletion completion = ^(NSData *data, NSURLResponse *response, NSError *error) {
+        NSString *contentType;
+        
+        if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            NSDictionary *responseHeaders = [httpResponse allHeaderFields];
+            ASSIGN_NOT_NIL(contentType, [responseHeaders valueForKey:@"Content-Type"]);
+            if (nil != contentType) {
+                contentType = [contentType lowercaseString];
+                NSRange indexOfSemi = [contentType rangeOfString:@";"];
+                if (indexOfSemi.location != NSNotFound) {
+                    contentType = [contentType substringToIndex:indexOfSemi.location];
+                }
+            }
+        }
+        // if there is no result data, and there is an error, make the parsed object the error's localizedDescription
+        NSObject *parsedObject;
+        if (nil != error && (nil == data || data.length <= 0)) {
+            parsedObject = error.localizedDescription;
+        } else {
+            parsedObject = [weakSelf resultBasedOnContentType:contentType
+                                                 fromData:data];
+        }
+        
+        [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
+        if (nil != error) {
+            errorBlock(parsedObject, error, weakRequest, response);
+            return;
+        }
+        
+        successBlock(parsedObject, weakRequest, response);
+    };
+    
+    NSURLSessionDataTask *task = [self.sharedURLSession dataTaskWithRequest:request
+                                                          completionHandler:completion];
+    [task resume];
+}
+
+/*
+ * Download a file from sourcePath to destinationPath.
+ * We need to implement the delegate callback methodology in order to use a progress block,
+ * ergo, the successblock passed here will be called inside another block we have to create
+ * in this method.
+ */
+- (void)downloadFromFullPath:(NSString *)sourcePath
+                      toPath:(NSString *)destinationPath
+           withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
+                 withSuccess:(TSNetworkSuccessBlock)successBlock
+                   withError:(TSNetworkErrorBlock)errorBlock
+{
+    NSAssert(nil != sourcePath && nil != destinationPath, @"paths were not set up");
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:sourcePath]];
+    request.HTTPMethod = @"GET";
+    
+    if (nil != self.username && nil != self.password) {
+        NSString *base64EncodedString = [[NSString stringWithFormat:@"%@:%@", self.username, self.password] base64EncodedString];
+        NSString *valueString = [NSString stringWithFormat:@"Basic %@", base64EncodedString];
+        [request setValue:valueString forHTTPHeaderField:@"Authorization"];
+    }
+    
+    __weak typeof(request) weakRequest = request;
+    URLSessionDownloadTaskCompletion completionBlock = ^(NSURL *location, NSError *error) {
+        // does this file exist?
+        NSFileManager *fm = [NSFileManager new];
+        if (![fm fileExistsAtPath:location.path isDirectory:NO]) {
+            // aint this some shit, it finished without error, but the file is not available at location
+            NSString *text = NSLocalizedStringFromTable(@"Unable to locate downloaded file", @"TSNetworking", nil);
+            error = [NSError errorWithDomain:NSURLErrorDomain
+                                    withCode:NSURLErrorCannotOpenFile
+                                    withText:text];
+            
+            errorBlock(nil, error, weakRequest, nil);
+            return;
+        }
+        
+        // move the file to the programmers destination
+        error = nil;
+        [fm moveItemAtPath:location.path toPath:destinationPath error:&error];
+        if (nil != error) {
+            // son of a bitch
+            NSString *text = NSLocalizedStringFromTable(@"Unable to move file", @"TSNetworking", nil);
+            error = [NSError errorWithDomain:NSURLErrorDomain
+                                    withCode:NSURLErrorCannotMoveFile
+                                    withText:text];
+            
+            errorBlock(nil, error, weakRequest, nil);
+            return;
+        }
+        
+        // all worked as intended
+        successBlock(nil, weakRequest, nil);
+    };
+    
+    NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithRequest:request
+                                                                          completionHandler:nil];
+    // Thanks for fucking nothing apple. There is no way to associate a progress block to a download task, all you can do
+    // is listen to the callback - and then what? How do you find the block of code to run for that task?
+    // AND there is no way to get the delegate callbacks (NSURLSessionDownloadDelegate) if you use a completionHandler block
+    // when instantiating the task as above. Fuck you. Have to do this horrid collection of progress and completion blocks.
+    [self.downloadTaskProgressBlocks setObject:progressBlock forKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]];
+    [self.downloadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]];
+    [downloadTask resume];
+}
+
+- (void)uploadFromFullPath:(NSString *)sourcePath
+                    toPath:(NSString *)destinationPath
+         withProgressBlock:(id)progressBlock
+               withSuccess:(TSNetworkSuccessBlock)successBlock
+                 withError:(TSNetworkErrorBlock)errorBlock
+{
+    NSAssert(self.isBackgroundConfig, @"Must be run in backgroundSession, not sharedSession");
+    
+    NSFileManager *fm = [NSFileManager new];
+    NSError *error;
+    if (![fm fileExistsAtPath:sourcePath isDirectory:NO]) {
+        // file to be uploaded not found
+        NSString *text = NSLocalizedStringFromTable(@"Unable to locate file to upload", @"TSNetworking", nil);
+        error = [NSError errorWithDomain:NSURLErrorDomain
+                                withCode:NSURLErrorCannotOpenFile
+                                withText:text];
+        
+        errorBlock(nil, error, nil, nil);
+        return;
+    }
+    
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:destinationPath]];
+    [request setHTTPMethod:@"POST"];
+    
+    __weak typeof(request) weakRequest = request;
+    __weak typeof(self) weakSelf = self;
+    URLSessionTaskCompletion completionBlock = ^(NSData *data, NSURLResponse *response, NSError *error) {
+        NSString *contentType;
+        
+        if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
+            NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
+            NSDictionary *responseHeaders = [httpResponse allHeaderFields];
+            ASSIGN_NOT_NIL(contentType, [responseHeaders valueForKey:@"Content-Type"]);
+            if (nil != contentType) {
+                contentType = [contentType lowercaseString];
+                NSRange indexOfSemi = [contentType rangeOfString:@";"];
+                if (indexOfSemi.location != NSNotFound) {
+                    contentType = [contentType substringToIndex:indexOfSemi.location];
+                }
+            }
+        }
+        // if there is no result data, and there is an error, make the parsed object the error's localizedDescription
+        NSObject *parsedObject;
+        if (nil != error && (nil == data || data.length <= 0)) {
+            parsedObject = error.localizedDescription;
+        } else {
+            parsedObject = [weakSelf resultBasedOnContentType:contentType
+                                                 fromData:data];
+        }
+        
+        [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
+        if (nil != error) {
+            errorBlock(parsedObject, error, weakRequest, response);
+            return;
+        }
+        
+        successBlock(parsedObject, weakRequest, response);
+    };
+    
+    NSURLSessionUploadTask *uploadTask = [self.sharedURLSession uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:sourcePath]];
+    [uploadTask resume];
+    
+    [self.uploadProgressBlocks setObject:progressBlock forKey:[NSNumber numberWithInt:uploadTask.taskIdentifier]];
+    [self.uploadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInt:uploadTask.taskIdentifier]];
+}
+
 #pragma mark - NSURLSessionTaskDelegate
 
 - (void)URLSession:(NSURLSession *)session
@@ -333,5 +425,82 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
     }
 }
 
+- (void)URLSession:(NSURLSession *)session
+              task:(NSURLSessionTask *)task
+ needNewBodyStream:(void (^)(NSInputStream *))completionHandler
+{
+    
+}
+
+- (void)URLSession:(NSURLSession *)session
+              task:(NSURLSessionTask *)task
+   didSendBodyData:(int64_t)bytesSent
+    totalBytesSent:(int64_t)totalBytesSent
+totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
+{
+    TSNetworkUploadTaskProgressBlock progress;
+    ASSIGN_NOT_NIL(progress, [self.uploadProgressBlocks objectForKey:[NSNumber numberWithInt:task.taskIdentifier]]);
+    if (NULL != progress) {
+        progress(bytesSent, totalBytesSent, totalBytesExpectedToSend);
+    }
+}
+
+#pragma mark - NSURLSessionDownloadDelegate
+
+- (void)URLSession:(NSURLSession *)session
+              task:(NSURLSessionTask *)task
+didCompleteWithError:(NSError *)error
+{
+    if (![task isKindOfClass:[NSURLSessionUploadTask class]]) {
+        return;
+    }
+    NSLog(@"finished upload");
+    URLSessionTaskCompletion completionBlock;
+    ASSIGN_NOT_NIL(completionBlock, [self.uploadCompletedBlocks objectForKey:[NSNumber numberWithInt:task.taskIdentifier]]);
+    if (NULL != completionBlock) {
+        completionBlock(nil, task.response, error);
+    }
+    [self.uploadCompletedBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
+    [self.uploadProgressBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
+}
+
+- (void)URLSession:(NSURLSession *)session
+      downloadTask:(NSURLSessionDownloadTask *)downloadTask
+      didWriteData:(int64_t)bytesWritten
+ totalBytesWritten:(int64_t)totalBytesWritten
+totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
+{
+    // thanks to apple being idiots I have to listen to the 3 delegate methods for the downloadTask instead of assigning
+    // a single completionblock when I created the downloadTask. I also have to keep a local list of progress and completion
+    // blocks due to this protocol
+    TSNetworkDownloadTaskProgressBlock progress;
+    ASSIGN_NOT_NIL(progress, [self.downloadTaskProgressBlocks objectForKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]]);
+    if (NULL != progress) {
+        progress(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    }
+}
+
+- (void)URLSession:(NSURLSession *)session
+      downloadTask:(NSURLSessionDownloadTask *)downloadTask
+ didFinishDownloadingToURL:(NSURL *)location
+{
+    NSLog(@"finished download");
+    URLSessionDownloadTaskCompletion completionBlock;
+    ASSIGN_NOT_NIL(completionBlock, [self.downloadCompletedBlocks objectForKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]]);
+    if (NULL != completionBlock) {
+        completionBlock(location, nil);
+    }
+    [self.downloadTaskProgressBlocks removeObjectForKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]];
+    [self.downloadCompletedBlocks removeObjectForKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]];
+    
+}
+
+- (void)URLSession:(NSURLSession *)session
+      downloadTask:(NSURLSessionDownloadTask *)downloadTask
+ didResumeAtOffset:(int64_t)fileOffset
+expectedTotalBytes:(int64_t)expectedTotalBytes
+{
+    // the hills are alive with the sound of the fucks I don't give
+}
 
 @end

@@ -23,6 +23,8 @@
 		2B58463C185FC4D100E1C028 /* NSError+Factory.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B58463B185FC4D100E1C028 /* NSError+Factory.m */; };
 		2B5E19A7185EB3FB005294DC /* Base64.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B5E19A6185EB3FB005294DC /* Base64.m */; };
 		2B5E19AA185ECA32005294DC /* AFSecurityPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B5E19A9185ECA32005294DC /* AFSecurityPolicy.m */; };
+		2B763E51186012E400B7A046 /* ourLord.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2B763E50186012E400B7A046 /* ourLord.jpg */; };
+		2B763E521860142B00B7A046 /* ourLord.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2B763E50186012E400B7A046 /* ourLord.jpg */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +62,9 @@
 		2B5E19A6185EB3FB005294DC /* Base64.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Base64.m; sourceTree = "<group>"; };
 		2B5E19A8185ECA32005294DC /* AFSecurityPolicy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AFSecurityPolicy.h; sourceTree = "<group>"; };
 		2B5E19A9185ECA32005294DC /* AFSecurityPolicy.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AFSecurityPolicy.m; sourceTree = "<group>"; };
+		2B763E4E1860069E00B7A046 /* auth.node.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = auth.node.js; sourceTree = "<group>"; };
+		2B763E4F1860082F00B7A046 /* multipart.node.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = multipart.node.js; sourceTree = "<group>"; };
+		2B763E50186012E400B7A046 /* ourLord.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = ourLord.jpg; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,6 +148,9 @@
 			isa = PBXGroup;
 			children = (
 				2B1AC029185E81490065CD8B /* TSNetworkingTests.m */,
+				2B763E4E1860069E00B7A046 /* auth.node.js */,
+				2B763E4F1860082F00B7A046 /* multipart.node.js */,
+				2B763E50186012E400B7A046 /* ourLord.jpg */,
 				2B1AC024185E81490065CD8B /* Supporting Files */,
 			);
 			path = TSNetworkingTests;
@@ -247,6 +255,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2B763E521860142B00B7A046 /* ourLord.jpg in Resources */,
 				2B1AC00F185E81490065CD8B /* InfoPlist.strings in Resources */,
 				2B1AC017185E81490065CD8B /* Images.xcassets in Resources */,
 			);
@@ -257,6 +266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2B1AC028185E81490065CD8B /* InfoPlist.strings in Resources */,
+				2B763E51186012E400B7A046 /* ourLord.jpg in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
