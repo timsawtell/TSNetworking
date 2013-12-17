@@ -16,21 +16,27 @@
 #import <XCTest/XCTest.h>
 #import "TSNetworking.h"
 
+NSString * const kNoAuthNeeded = @"http://localhost:8081";
+NSString * const kAuthNeeded = @"http://localhost:8080";
+NSString * const kMultipartUpload = @"http://localhost:8082/upload";
+
 @interface TSNetworkingTests : XCTestCase
 @property (nonatomic, strong) dispatch_semaphore_t semaphore;
 @property (nonatomic, strong) NSString *baseURLString;
 @end
+
+#warning if you want these tests to work you need to install node.js on your machine.
+/* after you install node.js, run these 3 files (from the TSNetworkTests directory) in 3 separate terminal sessions
+ node auth.node.js
+ node noauth.node.js
+ node multipart.node.js
+ */
 
 @implementation TSNetworkingTests
 
 - (void)setUp
 {
     [super setUp];
-    self.baseURLString = @"http://localhost:8080";
-    [[TSNetworking sharedSession] setBaseURLString:self.baseURLString];
-    [[TSNetworking sharedSession] setBasicAuthUsername:nil withPassword:nil];
-    [[TSNetworking backgroundSession] setBaseURLString:self.baseURLString];
-    [[TSNetworking backgroundSession] setBasicAuthUsername:nil withPassword:nil];
 }
 
 - (void)tearDown
@@ -63,10 +69,45 @@
         XCTAssertNotNil(error, @"nil error obj");
         [weakSelf signalFinished:completed];
     };
-
+    
+    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
     [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
+                                             withAddtionalHeaders:nil
+                                                      withSuccess:successBlock
+                                                        withError:errorBlock];
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+- (void)testGetAdditonalHeaders
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof (self) weakSelf = self;
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(resultObject, @"nil result obj");
+        NSDictionary *headers = [request allHTTPHeaderFields];
+        XCTAssertTrue([[headers valueForKey:@"Accept"] isEqualToString:@"application/json"], "header missing");
+        XCTAssertTrue([[headers valueForKey:@"Content-Type"] isEqualToString:@"application/json"], "header missing");
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(error, @"nil error obj");
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
+        [weakSelf signalFinished:completed];
+    };
+    
+    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
+    [[TSNetworking sharedSession] addSessionHeaders:@{@"Accept":@"application/json"}];
+    
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+                                                       withMethod:HTTP_METHOD_GET
+                                                   withParameters:nil
+                                             withAddtionalHeaders:@{@"Content-Type":@"application/json"}
                                                       withSuccess:successBlock
                                                         withError:errorBlock];
     [completed waitUntilDate:[NSDate distantFuture]];
@@ -81,21 +122,24 @@
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(resultObject, @"nil result obj");
-        NSString *shouldBeString = [NSString stringWithFormat:@"%@?key=value", weakSelf.baseURLString];
+        NSString *shouldBeString = [NSString stringWithFormat:@"%@?key=value", kNoAuthNeeded];
         XCTAssertTrue([[request.URL absoluteString] isEqualToString:shouldBeString]);
         [weakSelf signalFinished:completed];
     };
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
         [weakSelf signalFinished:completed];
     };
     
+    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
     [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
-                                                           withMethod:HTTP_METHOD_GET
-                                                       withParameters:@{@"key": @"value"}
-                                                          withSuccess:successBlock
-                                                            withError:errorBlock];
+                                                       withMethod:HTTP_METHOD_GET
+                                                   withParameters:@{@"key": @"value"}
+                                             withAddtionalHeaders:nil
+                                                      withSuccess:successBlock
+                                                        withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -117,16 +161,19 @@
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
         [weakSelf signalFinished:completed];
     };
     
+    [[TSNetworking sharedSession] setBaseURLString:kAuthNeeded];
     [[TSNetworking sharedSession] setBasicAuthUsername:@"hack" withPassword:@"thegibson"];
     
     [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
-                                                           withMethod:HTTP_METHOD_GET
-                                                       withParameters:nil
-                                                          withSuccess:successBlock
-                                                            withError:errorBlock];
+                                                       withMethod:HTTP_METHOD_GET
+                                                   withParameters:nil
+                                             withAddtionalHeaders:nil
+                                                      withSuccess:successBlock
+                                                        withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -149,12 +196,15 @@
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
         [weakSelf signalFinished:completed];
     };
     
+    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
     [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_POST
                                                    withParameters:@{@"key": @"value"}
+                                             withAddtionalHeaders:nil
                                                       withSuccess:successBlock
                                                         withError:errorBlock];
     
@@ -171,29 +221,31 @@
     __weak typeof(self) weakSelf = self;
     
     NSString *destinationPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
-    destinationPath = [destinationPath stringByAppendingPathComponent:@"1mb.mp4"];
+    destinationPath = [destinationPath stringByAppendingPathComponent:@"ourLord.jpeg"];
     
     __block NSFileManager *fm = [NSFileManager new];
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
-        [weakSelf signalFinished:completed];
         [fm removeItemAtPath:destinationPath error:nil];
+        [weakSelf signalFinished:completed];
     };
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(error, @"nil error obj");
         NSLog(@"%@", error.localizedDescription);
-        [weakSelf signalFinished:completed];
         [fm removeItemAtPath:destinationPath error:&error];
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
+        [weakSelf signalFinished:completed];
     };
     
     TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
         NSLog(@"Download written: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
     };
     
-    [[TSNetworking backgroundSession] downloadFromFullPath:@"https://archive.org/download/1mbFile/1mb.mp4"
+    [[TSNetworking backgroundSession] downloadFromFullPath:@"http://images.dailytech.com/nimage/gabe_newell.jpeg"
                                                     toPath:destinationPath
+                                      withAddtionalHeaders:nil
                                          withProgressBlock:progressBlock
                                                withSuccess:successBlock
                                                  withError:errorBlock];
@@ -220,6 +272,7 @@
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
         NSLog(@"%@", resultObject);
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
         [weakSelf signalFinished:completed];
     };
     
@@ -228,7 +281,8 @@
     };
     
     [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
-                                                  toPath:@"http://localhost:8080/upload"
+                                                  toPath:kMultipartUpload
+                                    withAddtionalHeaders:nil
                                        withProgressBlock:progressBlock
                                              withSuccess:successBlock
                                                withError:errorBlock];

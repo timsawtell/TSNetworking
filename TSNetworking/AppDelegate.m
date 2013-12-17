@@ -13,6 +13,7 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
+    [[TSNetworking sharedSession] addSessionHeaders:@{@"all":@"night"}];
     return YES;
 }
 

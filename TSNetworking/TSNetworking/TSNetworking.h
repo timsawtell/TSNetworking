@@ -50,6 +50,10 @@ typedef enum {
 - (void)setBasicAuthUsername:(NSString *)username
                 withPassword:(NSString *)password;
 
+- (void)addSessionHeaders:(NSDictionary *)headers;
+
+- (void)removeAllSessionHeaders;
+
 /*
  * Perform a HTTP task, i.e. POST, GET, DELETE.
  * These tasks do not run in the background, they are run with session type defaultSessionConfiguration
@@ -57,6 +61,7 @@ typedef enum {
 - (void)performDataTaskWithRelativePath:(NSString *)path
                              withMethod:(HTTP_METHOD)method
                          withParameters:(NSDictionary *)parameters
+                   withAddtionalHeaders:(NSDictionary *)headers
                             withSuccess:(TSNetworkSuccessBlock)successBlock
                               withError:(TSNetworkErrorBlock)errorBlock;
 
@@ -69,6 +74,7 @@ typedef enum {
  */
 - (void)downloadFromFullPath:(NSString *)sourcePath
                       toPath:(NSString *)destinationPath
+        withAddtionalHeaders:(NSDictionary *)headers
            withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
                  withSuccess:(TSNetworkSuccessBlock)successBlock
                    withError:(TSNetworkErrorBlock)errorBlock;
@@ -81,6 +87,7 @@ typedef enum {
  */
 - (void)uploadFromFullPath:(NSString *)sourcePath
                     toPath:(NSString *)destinationPath
+      withAddtionalHeaders:(NSDictionary *)headers
          withProgressBlock:(id)progressBlock
                withSuccess:(TSNetworkSuccessBlock)successBlock
                  withError:(TSNetworkErrorBlock)errorBlock;

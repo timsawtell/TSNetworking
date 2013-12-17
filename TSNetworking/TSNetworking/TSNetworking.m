@@ -25,13 +25,14 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 @property (nonatomic, strong) NSURLSessionConfiguration *defaultConfiguration;
 @property (nonatomic, strong) NSURLSession *sharedURLSession;
 @property (nonatomic, strong) NSURL *baseURL;
-@property (nonatomic, copy) NSString *username;
-@property (nonatomic, copy) NSString *password;
 @property (nonatomic, strong) NSIndexSet *acceptableStatusCodes;
 @property (nonatomic, strong) NSMutableDictionary *downloadTaskProgressBlocks; //blame c̶a̶n̶a̶d̶a̶ apple
 @property (nonatomic, strong) NSMutableDictionary *downloadCompletedBlocks; //blame c̶a̶n̶a̶d̶a̶ apple
-@property (nonatomic, strong) NSMutableDictionary *uploadCompletedBlocks;
-@property (nonatomic, strong) NSMutableDictionary *uploadProgressBlocks;
+@property (nonatomic, strong) NSMutableDictionary *uploadCompletedBlocks; //blame c̶a̶n̶a̶d̶a̶ apple
+@property (nonatomic, strong) NSMutableDictionary *uploadProgressBlocks; //blame c̶a̶n̶a̶d̶a̶ apple
+@property (nonatomic, strong) NSMutableDictionary *sessionHeaders; //because I don't feel like destroying the NSURLSession each time I need new headers in a request
+@property (nonatomic, copy) NSString *username;
+@property (nonatomic, copy) NSString *password;
 @property (nonatomic) BOOL isBackgroundConfig;
 
 @end
@@ -51,8 +52,6 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
             _uploadProgressBlocks = [NSMutableDictionary dictionary];
         } else {
             _defaultConfiguration = [NSURLSessionConfiguration defaultSessionConfiguration];
-            [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Accept": @"application/json"}];
-            [_defaultConfiguration setHTTPAdditionalHeaders:@{@"Content-Type": @"application/json"}];
             _defaultConfiguration.HTTPMaximumConnectionsPerHost = 1;
         }
         _defaultConfiguration.allowsCellularAccess = YES;
@@ -66,6 +65,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         _securityPolicy = [AFSecurityPolicy defaultPolicy];
         _acceptableStatusCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
         _isBackgroundConfig = background;
+        _sessionHeaders = [NSMutableDictionary dictionary];
     }
     return self;
 }
@@ -104,6 +104,18 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     }
     
     return data;
+}
+
+- (void)addHeaders:(NSDictionary *)headers
+         toRequest:(NSMutableURLRequest *)request
+{
+    for (NSString *key in headers) {
+        [request addValue:[headers valueForKey:key] forHTTPHeaderField:key];
+    }
+    
+    for (NSString *key in self.sessionHeaders) {
+        [request addValue:[self.sessionHeaders valueForKey:key] forHTTPHeaderField:key];
+    }
 }
 
 - (BOOL)validateResponse:(NSHTTPURLResponse *)response
@@ -159,14 +171,27 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     self.password = password;
 }
 
+- (void)addSessionHeaders:(NSDictionary *)headers
+{
+    [self.sessionHeaders addEntriesFromDictionary:headers];
+}
+
+- (void)removeAllSessionHeaders
+{
+    self.sessionHeaders = [NSMutableDictionary dictionary];
+}
+
 - (void)performDataTaskWithRelativePath:(NSString *)path
                              withMethod:(HTTP_METHOD)method
                          withParameters:(NSDictionary *)parameters
+                   withAddtionalHeaders:(NSDictionary *)headers
                             withSuccess:(TSNetworkSuccessBlock)successBlock
                               withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(nil != self.baseURL, @"Base URL is nil");
     NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
+    NSAssert(NULL != successBlock, @"You need a success block");
+    NSAssert(NULL != errorBlock, @"You need an error block");
     
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:self.baseURL
                                                            cachePolicy:NSURLRequestReloadIgnoringCacheData
@@ -261,6 +286,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         successBlock(parsedObject, weakRequest, response);
     };
     
+    [self addHeaders:headers toRequest:request];
     NSURLSessionDataTask *task = [self.sharedURLSession dataTaskWithRequest:request
                                                           completionHandler:completion];
     [task resume];
@@ -268,11 +294,17 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 
 - (void)downloadFromFullPath:(NSString *)sourcePath
                       toPath:(NSString *)destinationPath
+        withAddtionalHeaders:(NSDictionary *)headers
            withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
                  withSuccess:(TSNetworkSuccessBlock)successBlock
                    withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(nil != sourcePath && nil != destinationPath, @"paths were not set up");
+    NSAssert(nil != sourcePath, @"You need a source path");
+    NSAssert(nil != destinationPath, @"You need a source path");
+    NSAssert(NULL != successBlock, @"You need a success block");
+    NSAssert(NULL != errorBlock, @"You need an error block");
+    
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:sourcePath]];
     request.HTTPMethod = @"GET";
     
@@ -315,6 +347,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         successBlock(location, weakRequest, nil);
     };
     
+    [self addHeaders:headers toRequest:request];
     NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithRequest:request
                                                                           completionHandler:nil];
     // Thanks for fucking nothing apple. There is no way to associate a progress block to a download task, all you can do
@@ -328,11 +361,16 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 
 - (void)uploadFromFullPath:(NSString *)sourcePath
                     toPath:(NSString *)destinationPath
+      withAddtionalHeaders:(NSDictionary *)headers
          withProgressBlock:(id)progressBlock
                withSuccess:(TSNetworkSuccessBlock)successBlock
                  withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(self.isBackgroundConfig, @"Must be run in backgroundSession, not sharedSession");
+    NSAssert(nil != sourcePath, @"You need a source path");
+    NSAssert(nil != destinationPath, @"You need a source path");
+    NSAssert(NULL != successBlock, @"You need a success block");
+    NSAssert(NULL != errorBlock, @"You need an error block");
     
     NSFileManager *fm = [NSFileManager new];
     NSError *error;
@@ -385,6 +423,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         successBlock(parsedObject, weakRequest, response);
     };
     
+    [self addHeaders:headers toRequest:request];
     NSURLSessionUploadTask *uploadTask = [self.sharedURLSession uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:sourcePath]];
     [uploadTask resume];
     
