@@ -123,7 +123,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     return YES;
 }
 
-#pragma mark - Public Methods
+#pragma mark - Singletons
 
 + (TSNetworking *)sharedSession
 {
@@ -145,6 +145,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     return backgroundSession;
 }
 
+#pragma mark - Public Methods
+
 - (void)setBaseURLString:(NSString *)baseURLString
 {
     self.baseURL = [NSURL URLWithString:baseURLString];
@@ -157,10 +159,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     self.password = password;
 }
 
-/*
- * Perform a HTTP operation.
- */
-- (void)performURLOperationWithRelativePath:(NSString *)path
+- (void)performDataTaskWithRelativePath:(NSString *)path
                                  withMethod:(HTTP_METHOD)method
                              withParameters:(NSDictionary *)parameters
                                 withSuccess:(TSNetworkSuccessBlock)successBlock
@@ -267,12 +266,6 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     [task resume];
 }
 
-/*
- * Download a file from sourcePath to destinationPath.
- * We need to implement the delegate callback methodology in order to use a progress block,
- * ergo, the successblock passed here will be called inside another block we have to create
- * in this method.
- */
 - (void)downloadFromFullPath:(NSString *)sourcePath
                       toPath:(NSString *)destinationPath
            withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
@@ -429,7 +422,7 @@ didReceiveChallenge:(NSURLAuthenticationChallenge *)challenge
               task:(NSURLSessionTask *)task
  needNewBodyStream:(void (^)(NSInputStream *))completionHandler
 {
-    
+    //todo: give a shit
 }
 
 - (void)URLSession:(NSURLSession *)session

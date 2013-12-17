@@ -1,10 +1,17 @@
-//
-//  TSNetworkingTests.m
-//  TSNetworkingTests
-//
-//  Created by Tim Sawtell on 16/12/2013.
-//  Copyright (c) 2013 Sawtell Software. All rights reserved.
-//
+/*
+ Copyright (c) 2013 Tim Sawtell
+ 
+ Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"),
+ to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+ 
+ The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+ 
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+ IN THE SOFTWARE.
+ */
 
 #import <XCTest/XCTest.h>
 #import "TSNetworking.h"
@@ -57,11 +64,11 @@
         [weakSelf signalFinished:completed];
     };
 
-    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
-                                                    withMethod:HTTP_METHOD_GET
-                                                withParameters:nil
-                                                   withSuccess:successBlock
-                                                     withError:errorBlock];
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+                                                           withMethod:HTTP_METHOD_GET
+                                                       withParameters:nil
+                                                          withSuccess:successBlock
+                                                            withError:errorBlock];
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
 }
@@ -84,11 +91,11 @@
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
-                                                    withMethod:HTTP_METHOD_GET
-                                                withParameters:@{@"key": @"value"}
-                                                   withSuccess:successBlock
-                                                     withError:errorBlock];
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+                                                           withMethod:HTTP_METHOD_GET
+                                                       withParameters:@{@"key": @"value"}
+                                                          withSuccess:successBlock
+                                                            withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -115,11 +122,11 @@
     
     [[TSNetworking sharedSession] setBasicAuthUsername:@"hack" withPassword:@"thegibson"];
     
-    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
-                                                    withMethod:HTTP_METHOD_GET
-                                                withParameters:nil
-                                                   withSuccess:successBlock
-                                                     withError:errorBlock];
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+                                                           withMethod:HTTP_METHOD_GET
+                                                       withParameters:nil
+                                                          withSuccess:successBlock
+                                                            withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -145,11 +152,11 @@
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] performURLOperationWithRelativePath:nil
-                                                    withMethod:HTTP_METHOD_POST
-                                                withParameters:@{@"key": @"value"}
-                                                   withSuccess:successBlock
-                                                     withError:errorBlock];
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+                                                           withMethod:HTTP_METHOD_POST
+                                                       withParameters:@{@"key": @"value"}
+                                                          withSuccess:successBlock
+                                                            withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
@@ -207,10 +214,12 @@
     XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
         [weakSelf signalFinished:completed];
     };
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
         [weakSelf signalFinished:completed];
     };
     
@@ -219,7 +228,7 @@
     };
     
     [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
-                                                  toPath:@"http://localhost:8080"
+                                                  toPath:@"http://localhost:8080/upload"
                                        withProgressBlock:progressBlock
                                              withSuccess:successBlock
                                                withError:errorBlock];

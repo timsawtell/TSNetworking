@@ -50,18 +50,35 @@ typedef enum {
 - (void)setBasicAuthUsername:(NSString *)username
                 withPassword:(NSString *)password;
 
-- (void)performURLOperationWithRelativePath:(NSString *)path
-                          withMethod:(HTTP_METHOD)method
-                      withParameters:(NSDictionary *)parameters
-                         withSuccess:(TSNetworkSuccessBlock)successBlock
-                           withError:(TSNetworkErrorBlock)errorBlock;
+/*
+ * Perform a HTTP task, i.e. POST, GET, DELETE.
+ * These tasks do not run in the background, they are run with session type defaultSessionConfiguration
+ */
+- (void)performDataTaskWithRelativePath:(NSString *)path
+                             withMethod:(HTTP_METHOD)method
+                         withParameters:(NSDictionary *)parameters
+                            withSuccess:(TSNetworkSuccessBlock)successBlock
+                              withError:(TSNetworkErrorBlock)errorBlock;
 
+/*
+ * Download a file from sourcePath to destinationPath. Because it uses a background style task
+ * we need to implement the delegate callback methodology in order to use the progress block,
+ * ergo, the successblock passed here will be called inside another block we have to create
+ * in this method. see: https://developer.apple.com/library/ios/documentation/Foundation/Reference/NSURLSessionConfiguration_class/Reference/Reference.html#//apple_ref/occ/clm/NSURLSessionConfiguration/backgroundSessionConfiguration:
+ 
+ */
 - (void)downloadFromFullPath:(NSString *)sourcePath
                       toPath:(NSString *)destinationPath
            withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
                  withSuccess:(TSNetworkSuccessBlock)successBlock
                    withError:(TSNetworkErrorBlock)errorBlock;
 
+/*
+ * Upload a file from the device to a URL. Because it uses a background style task
+ * we need to implement the delegate callback methodology in order to use the progress block,
+ * ergo, the successblock passed here will be called inside another block we have to create
+ * in this method. see: https://developer.apple.com/library/ios/documentation/Foundation/Reference/NSURLSessionConfiguration_class/Reference/Reference.html#//apple_ref/occ/clm/NSURLSessionConfiguration/backgroundSessionConfiguration:
+ */
 - (void)uploadFromFullPath:(NSString *)sourcePath
                     toPath:(NSString *)destinationPath
          withProgressBlock:(id)progressBlock
