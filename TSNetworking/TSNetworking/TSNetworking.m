@@ -160,10 +160,10 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 }
 
 - (void)performDataTaskWithRelativePath:(NSString *)path
-                                 withMethod:(HTTP_METHOD)method
-                             withParameters:(NSDictionary *)parameters
-                                withSuccess:(TSNetworkSuccessBlock)successBlock
-                                  withError:(TSNetworkErrorBlock)errorBlock
+                             withMethod:(HTTP_METHOD)method
+                         withParameters:(NSDictionary *)parameters
+                            withSuccess:(TSNetworkSuccessBlock)successBlock
+                              withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(nil != self.baseURL, @"Base URL is nil");
     NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
@@ -373,7 +373,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
             parsedObject = error.localizedDescription;
         } else {
             parsedObject = [weakSelf resultBasedOnContentType:contentType
-                                                 fromData:data];
+                                                     fromData:data];
         }
         
         [weakSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
