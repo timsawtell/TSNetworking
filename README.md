@@ -12,15 +12,26 @@ Warning for young players: never reference self inside a block, use this style t
         __strong typeof(weakSelf) strongSelf = weakSelf;
         [strongSelf sendAMessage];
     };
+    
 ## Initialising:
 
     [[TSNetworking sharedSession] setBaseURLString:kBaseURLString];
-	[[TSNetworking sharedSession] setBasicAuthUsername:nil withPassword:nil];
+    [[TSNetworking sharedSession] setBasicAuthUsername:nil withPassword:nil];
+    [[TSNetworking sharedSession] addSessionHeaders:@{@"all":@"nightlong"}]; // sticks around forever, used in each request
 These settings last for the app's run lifetime
+
+## Maintaining:
+
+    [[TSNetworking sharedSession] removeAllSessionHeaders];
+
+## Which one to use?
+    [TSNetworking sharedSession] /* for all your regular GETs, POSTs. Given an NSObject as the result */
+    - OR -
+    [TSNetworking backgroundSession] /* for all your uploads and downloads. Uses funky new NSURLSession features to run while your apps if minimized, no need to pause and serialise your downloads on applicationDidEnterBackground */
 
 ## Get:
 
-	TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+  TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         NSLog(@"We got ourselves a: %@", resultObject);
     };
     
@@ -38,6 +49,7 @@ These settings last for the app's run lifetime
     [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
+                                             withAddtionalHeaders:@{@"Content-Type":@"application/json"}
                                                       withSuccess:successBlock
                                                         withError:errorBlock];
 
@@ -54,6 +66,7 @@ These settings last for the app's run lifetime
     [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_POST
                                                    withParameters:@{@"key": @"value"}
+                                             withAddtionalHeaders:nil
                                                       withSuccess:successBlock
                                                         withError:errorBlock];
 
@@ -71,16 +84,16 @@ These settings last for the app's run lifetime
         NSLog(@"Download written: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
     };
     
-    [[TSNetworking backgroundSession] downloadFromFullPath:@"https://archive.org/download/1mbFile/1mb.mp4"
-                                                    toPath:destinationPath
-                                         withProgressBlock:progressBlock
-                                               withSuccess:successBlock
-                                                 withError:errorBlock];
+    NSURLSessionDownloadTask *task = [[TSNetworking backgroundSession] downloadFromFullPath:@"https://archive.org/download/1mbFile/1mb.mp4"
+                                                                                     toPath:destinationPath
+                                                                       withAddtionalHeaders:nil
+                                                                          withProgressBlock:progressBlock
+                                                                                withSuccess:successBlock
+                                                                                  withError:errorBlock];
                                                  
 ## Upload:
 
     NSString *sourcePath = [[NSBundle mainBundle] pathForResource:@"ourLord" ofType:@"jpg"];
-    XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         //resultObject is whatever the server responded with, could be JSON, HTML, whatever
@@ -94,8 +107,9 @@ These settings last for the app's run lifetime
         NSLog(@"uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
     };
     
-    [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
-                                                  toPath:@"http://localhost:8080/upload"
-                                       withProgressBlock:progressBlock
-                                             withSuccess:successBlock
-                                               withError:errorBlock];
+    NSURLSessionUploadTask *uploadTask = [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
+                                                                                       toPath:kMultipartUpload
+                                                                         withAddtionalHeaders:nil
+                                                                            withProgressBlock:progressBlock
+                                                                                  withSuccess:successBlock
+                                                                                    withError:errorBlock];
