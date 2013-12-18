@@ -31,7 +31,7 @@ These settings last for the app's run lifetime
 
 ## Get:
 
-  TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         NSLog(@"We got ourselves a: %@", resultObject);
     };
     
