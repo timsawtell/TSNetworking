@@ -5,17 +5,9 @@ Because I wanted to see how NSURLSession worked.
 
 ## Using cocoapods?
 
+    platform :ios, '7.0'
     pod 'TSNetworking'
-    
-Warning: the success and error blocks are executed on whatever thread apple decides.
-I suggest if you're doing UI changes in these blocks that you dispatch_async and get the main queue.
-Warning for young players: never reference self inside a block, use this style to avoid retain cycles
-    
-    __weak typeof(self) weakSelf = self;
-    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
-        __strong typeof(weakSelf) strongSelf = weakSelf;
-        [strongSelf sendAMessage];
-    };
+
 
 ## Initialising:
 
@@ -32,6 +24,18 @@ These settings last for the app's run lifetime
     [TSNetworking sharedSession] /* for all your regular GETs, POSTs. Given an NSObject as the result */
     - OR -
     [TSNetworking backgroundSession] /* for all your uploads and downloads. Uses funky new NSURLSession features to run while your apps if minimized, no need to pause and serialise your downloads on applicationDidEnterBackground */
+
+## Warning
+
+The success and error blocks are executed on whatever thread apple decides.
+I suggest if you're doing UI changes in these blocks that you dispatch_async and get the main queue.
+Warning for young players: never reference self inside a block, use this style to avoid retain cycles
+    
+    __weak typeof(self) weakSelf = self;
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        __strong typeof(weakSelf) strongSelf = weakSelf;
+        [strongSelf sendAMessage];
+    };
 
 ## Get:
 
