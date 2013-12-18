@@ -3,6 +3,10 @@ TSNetworking
 
 Because I wanted to see how NSURLSession worked.
 
+## Using cocoapods?
+
+    pod 'TSNetworking'
+    
 Warning: the success and error blocks are executed on whatever thread apple decides.
 I suggest if you're doing UI changes in these blocks that you dispatch_async and get the main queue.
 Warning for young players: never reference self inside a block, use this style to avoid retain cycles
@@ -12,7 +16,7 @@ Warning for young players: never reference self inside a block, use this style t
         __strong typeof(weakSelf) strongSelf = weakSelf;
         [strongSelf sendAMessage];
     };
-    
+
 ## Initialising:
 
     [[TSNetworking sharedSession] setBaseURLString:kBaseURLString];
