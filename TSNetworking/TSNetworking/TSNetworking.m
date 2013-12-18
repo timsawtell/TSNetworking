@@ -292,12 +292,12 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     [task resume];
 }
 
-- (void)downloadFromFullPath:(NSString *)sourcePath
-                      toPath:(NSString *)destinationPath
-        withAddtionalHeaders:(NSDictionary *)headers
-           withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
-                 withSuccess:(TSNetworkSuccessBlock)successBlock
-                   withError:(TSNetworkErrorBlock)errorBlock
+- (NSURLSessionDownloadTask *)downloadFromFullPath:(NSString *)sourcePath
+                                            toPath:(NSString *)destinationPath
+                              withAddtionalHeaders:(NSDictionary *)headers
+                                 withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
+                                       withSuccess:(TSNetworkSuccessBlock)successBlock
+                                         withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(nil != sourcePath && nil != destinationPath, @"paths were not set up");
     NSAssert(nil != sourcePath, @"You need a source path");
@@ -316,6 +316,11 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     
     __weak typeof(request) weakRequest = request;
     URLSessionDownloadTaskCompletion completionBlock = ^(NSURL *location, NSError *error) {
+        if (nil != error) {
+            errorBlock(nil, error, weakRequest, nil);
+            return;
+        }
+        
         // does this file exist?
         NSFileManager *fm = [NSFileManager new];
         if (![fm fileExistsAtPath:location.path isDirectory:NO]) {
@@ -357,14 +362,15 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     [self.downloadTaskProgressBlocks setObject:progressBlock forKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]];
     [self.downloadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInt:downloadTask.taskIdentifier]];
     [downloadTask resume];
+    return downloadTask;
 }
 
-- (void)uploadFromFullPath:(NSString *)sourcePath
-                    toPath:(NSString *)destinationPath
-      withAddtionalHeaders:(NSDictionary *)headers
-         withProgressBlock:(id)progressBlock
-               withSuccess:(TSNetworkSuccessBlock)successBlock
-                 withError:(TSNetworkErrorBlock)errorBlock
+- (NSURLSessionUploadTask *)uploadFromFullPath:(NSString *)sourcePath
+                                        toPath:(NSString *)destinationPath
+                          withAddtionalHeaders:(NSDictionary *)headers
+                             withProgressBlock:(id)progressBlock
+                                   withSuccess:(TSNetworkSuccessBlock)successBlock
+                                     withError:(TSNetworkErrorBlock)errorBlock
 {
     NSAssert(self.isBackgroundConfig, @"Must be run in backgroundSession, not sharedSession");
     NSAssert(nil != sourcePath, @"You need a source path");
@@ -382,7 +388,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                                 withText:text];
         
         errorBlock(nil, error, nil, nil);
-        return;
+        return nil;
     }
     
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:destinationPath]];
@@ -425,10 +431,11 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     
     [self addHeaders:headers toRequest:request];
     NSURLSessionUploadTask *uploadTask = [self.sharedURLSession uploadTaskWithRequest:request fromFile:[NSURL fileURLWithPath:sourcePath]];
-    [uploadTask resume];
-    
     [self.uploadProgressBlocks setObject:progressBlock forKey:[NSNumber numberWithInt:uploadTask.taskIdentifier]];
     [self.uploadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInt:uploadTask.taskIdentifier]];
+    [uploadTask resume];
+
+    return uploadTask;
 }
 
 #pragma mark - NSURLSessionTaskDelegate
@@ -483,17 +490,30 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
               task:(NSURLSessionTask *)task
 didCompleteWithError:(NSError *)error
 {
-    if (![task isKindOfClass:[NSURLSessionUploadTask class]]) {
+    if ([task isKindOfClass:[NSURLSessionDownloadTask class]]) {
+        URLSessionDownloadTaskCompletion completionBlock;
+        ASSIGN_NOT_NIL(completionBlock, [self.downloadCompletedBlocks objectForKey:[NSNumber numberWithInt:task.taskIdentifier]]);
+        if (NULL != completionBlock) {
+            completionBlock(nil, error);
+        }
+    } else if ([task isKindOfClass:[NSURLSessionUploadTask class]]) {
+        URLSessionTaskCompletion completionBlock;
+        ASSIGN_NOT_NIL(completionBlock, [self.uploadCompletedBlocks objectForKey:[NSNumber numberWithInt:task.taskIdentifier]]);
+        if (NULL != completionBlock) {
+            completionBlock(nil, task.response, error);
+        }
+    } else {
         return;
     }
-    NSLog(@"finished upload");
-    URLSessionTaskCompletion completionBlock;
-    ASSIGN_NOT_NIL(completionBlock, [self.uploadCompletedBlocks objectForKey:[NSNumber numberWithInt:task.taskIdentifier]]);
-    if (NULL != completionBlock) {
-        completionBlock(nil, task.response, error);
+    
+    
+    if ([task isKindOfClass:[NSURLSessionDownloadTask class]]) {
+        [self.downloadCompletedBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
+        [self.downloadCompletedBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
+    } else if ([task isKindOfClass:[NSURLSessionUploadTask class]]) {
+        [self.uploadCompletedBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
+        [self.uploadProgressBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
     }
-    [self.uploadCompletedBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
-    [self.uploadProgressBlocks removeObjectForKey:[NSNumber numberWithInt:task.taskIdentifier]];
 }
 
 - (void)URLSession:(NSURLSession *)session

@@ -254,6 +254,55 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     [completed unlock];
 }
 
+- (void)testCancelDownload
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
+    NSString *destinationPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    destinationPath = [destinationPath stringByAppendingPathComponent:@"1mb.mp4"];
+    
+    __block NSFileManager *fm = [NSFileManager new];
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
+        [fm removeItemAtPath:destinationPath error:nil];
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(error, @"nil error obj");
+        NSLog(@"%@", error.localizedDescription);
+        XCTAssertEqual(error.code, NSURLErrorCancelled, @"task was not cancelled, it was :%@", error.localizedDescription);
+        if ([fm fileExistsAtPath:destinationPath isDirectory:NO]) {
+            [fm removeItemAtPath:destinationPath error:&error];
+        }
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"Download written: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    };
+    
+    NSURLSessionDownloadTask *task = [[TSNetworking backgroundSession] downloadFromFullPath:@"https://archive.org/download/1mbFile/1mb.mp4"
+                                                                                     toPath:destinationPath
+                                                                       withAddtionalHeaders:nil
+                                                                          withProgressBlock:progressBlock
+                                                                                withSuccess:successBlock
+                                                                                  withError:errorBlock];
+    double delayInSeconds = 3.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void){
+        [task cancelByProducingResumeData:^(NSData *resumeData) {
+            XCTAssertNotNil(resumeData, "no data downloaded?");
+        }];
+    });
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
 #pragma mark - Upload
 
 - (void)testUpload
@@ -286,6 +335,47 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
                                        withProgressBlock:progressBlock
                                              withSuccess:successBlock
                                                withError:errorBlock];
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+- (void)testCancelUpload
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
+    NSString *sourcePath = [[NSBundle mainBundle] pathForResource:@"ourLord" ofType:@"jpg"];
+    XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        XCTAssertEqual(error.code, NSURLErrorCancelled, @"task was not cancelled, it was :%@", error.localizedDescription);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    };
+    
+    NSURLSessionUploadTask *uploadTask = [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
+                                                                                       toPath:kMultipartUpload
+                                                                         withAddtionalHeaders:nil
+                                                                            withProgressBlock:progressBlock
+                                                                                  withSuccess:successBlock
+                                                                                    withError:errorBlock];
+    
+    double delayInSeconds = 0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void){
+        [uploadTask cancel];
+    });
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];

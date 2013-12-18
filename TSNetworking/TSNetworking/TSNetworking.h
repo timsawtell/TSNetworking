@@ -36,12 +36,9 @@ typedef enum {
 
 @interface TSNetworking : NSObject <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate>
 
-/**
- The security policy used by created request operations to evaluate server trust for secure connections.
- */
-@property (nonatomic, strong) AFSecurityPolicy *securityPolicy;
+@property (nonatomic, strong) AFSecurityPolicy *securityPolicy; //The security policy used by created request operations to evaluate server trust for secure connections.
 
-+ (TSNetworking*)sharedSession;
++ (TSNetworking*)sharedSession; // for regular get / post requests 
 
 + (TSNetworking *)backgroundSession; // for uploads and downloads
 
@@ -72,12 +69,12 @@ typedef enum {
  * in this method. see: https://developer.apple.com/library/ios/documentation/Foundation/Reference/NSURLSessionConfiguration_class/Reference/Reference.html#//apple_ref/occ/clm/NSURLSessionConfiguration/backgroundSessionConfiguration:
  
  */
-- (void)downloadFromFullPath:(NSString *)sourcePath
-                      toPath:(NSString *)destinationPath
-        withAddtionalHeaders:(NSDictionary *)headers
-           withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
-                 withSuccess:(TSNetworkSuccessBlock)successBlock
-                   withError:(TSNetworkErrorBlock)errorBlock;
+- (NSURLSessionDownloadTask *)downloadFromFullPath:(NSString *)sourcePath
+                                            toPath:(NSString *)destinationPath
+                              withAddtionalHeaders:(NSDictionary *)headers
+                                 withProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
+                                       withSuccess:(TSNetworkSuccessBlock)successBlock
+                                         withError:(TSNetworkErrorBlock)errorBlock;
 
 /*
  * Upload a file from the device to a URL. Because it uses a background style task
@@ -85,12 +82,12 @@ typedef enum {
  * ergo, the successblock passed here will be called inside another block we have to create
  * in this method. see: https://developer.apple.com/library/ios/documentation/Foundation/Reference/NSURLSessionConfiguration_class/Reference/Reference.html#//apple_ref/occ/clm/NSURLSessionConfiguration/backgroundSessionConfiguration:
  */
-- (void)uploadFromFullPath:(NSString *)sourcePath
-                    toPath:(NSString *)destinationPath
-      withAddtionalHeaders:(NSDictionary *)headers
-         withProgressBlock:(id)progressBlock
-               withSuccess:(TSNetworkSuccessBlock)successBlock
-                 withError:(TSNetworkErrorBlock)errorBlock;
+- (NSURLSessionUploadTask *)uploadFromFullPath:(NSString *)sourcePath
+                                        toPath:(NSString *)destinationPath
+                          withAddtionalHeaders:(NSDictionary *)headers
+                             withProgressBlock:(id)progressBlock
+                                   withSuccess:(TSNetworkSuccessBlock)successBlock
+                                     withError:(TSNetworkErrorBlock)errorBlock;
 
 @end
 
