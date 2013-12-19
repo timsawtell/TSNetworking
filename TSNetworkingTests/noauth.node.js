@@ -8,5 +8,4 @@ var server = http.createServer(function(req, res) {
     res.end('cheers man');
 });
 
-
 server.listen(8081, function() { console.log("No Auth Server Listening on http://localhost:8081/"); });

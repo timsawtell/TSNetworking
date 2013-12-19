@@ -82,12 +82,24 @@ typedef enum {
  * ergo, the successblock passed here will be called inside another block we have to create
  * in this method. see: https://developer.apple.com/library/ios/documentation/Foundation/Reference/NSURLSessionConfiguration_class/Reference/Reference.html#//apple_ref/occ/clm/NSURLSessionConfiguration/backgroundSessionConfiguration:
  */
-- (NSURLSessionUploadTask *)uploadFromFullPath:(NSString *)sourcePath
-                                        toPath:(NSString *)destinationPath
-                          withAddtionalHeaders:(NSDictionary *)headers
-                             withProgressBlock:(id)progressBlock
-                                   withSuccess:(TSNetworkSuccessBlock)successBlock
-                                     withError:(TSNetworkErrorBlock)errorBlock;
+- (NSURLSessionUploadTask *)uploadInBackgroundFromLocalPath:(NSString *)sourcePath
+                                                     toPath:(NSString *)destinationPath
+                                       withAddtionalHeaders:(NSDictionary *)headers
+                                          withProgressBlock:(id)progressBlock
+                                                withSuccess:(TSNetworkSuccessBlock)successBlock
+                                                  withError:(TSNetworkErrorBlock)errorBlock;
+
+/*
+ * Upload NSData to a URL. This is NOT a background task. If you want to upload
+ * as a background task, please use the uploadFromFullPath:... method, as that 
+ * will guarantee a background upload
+ */
+- (NSURLSessionUploadTask *)uploadInForegroundData:(NSData *)data
+                                            toPath:(NSString *)destinationPath
+                              withAddtionalHeaders:(NSDictionary *)headers
+                                 withProgressBlock:(id)progressBlock
+                                       withSuccess:(TSNetworkSuccessBlock)successBlock
+                                         withError:(TSNetworkErrorBlock)errorBlock;
 
 @end
 

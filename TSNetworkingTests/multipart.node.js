@@ -5,7 +5,8 @@ var formidable = require('formidable'),
     http = require('http'),
     util = require('util');
 
-http.createServer(function(req, res) {
+
+var server = http.createServer(function(req, res) {
   if (req.url == '/upload' && req.method.toLowerCase() == 'post') {
     // parse a file upload
     var form = new formidable.IncomingForm();
@@ -30,4 +31,7 @@ http.createServer(function(req, res) {
     '<input type="submit" value="Upload">'+
     '</form>'
   );
-}).listen(8082);
+});
+
+
+server.listen(8082, function() { console.log("Multipart listening on http://localhost:8082/"); });

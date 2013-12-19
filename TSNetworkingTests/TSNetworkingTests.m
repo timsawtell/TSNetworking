@@ -305,8 +305,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
 }
-
-#pragma mark - Upload
+#pragma mark - Upload File
 
 - (void)testUpload
 {
@@ -329,10 +328,89 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     };
     
     TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
-        NSLog(@"uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+        NSLog(@"file uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
     };
     
-    [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
+    [[TSNetworking backgroundSession] uploadInBackgroundFromLocalPath:sourcePath
+                                                               toPath:kMultipartUpload
+                                                 withAddtionalHeaders:nil
+                                                    withProgressBlock:progressBlock
+                                                          withSuccess:successBlock
+                                                            withError:errorBlock];
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+- (void)testCancelUpload
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    NSString *sourcePath = [[NSBundle mainBundle] pathForResource:@"ourLord" ofType:@"jpg"];
+    XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        XCTAssertEqual(error.code, NSURLErrorCancelled, @"task was not cancelled, it was :%@", error.localizedDescription);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"file uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    };
+    
+    NSURLSessionUploadTask *uploadTask = [[TSNetworking backgroundSession] uploadInBackgroundFromLocalPath:sourcePath
+                                                                                                    toPath:kMultipartUpload
+                                                                                      withAddtionalHeaders:nil
+                                                                                         withProgressBlock:progressBlock
+                                                                                               withSuccess:successBlock
+                                                                                                 withError:errorBlock];
+    
+    double delayInSeconds = 0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delayInSeconds * NSEC_PER_SEC));
+    dispatch_after(popTime, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void){
+        [uploadTask cancel];
+    });
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+#pragma mark - Upload Data
+
+- (void)testUploadData
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    NSString *sourcePath = [[NSBundle mainBundle] pathForResource:@"ourLord" ofType:@"jpg"];
+    XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"data uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+    };
+    
+    NSFileManager *fm = [NSFileManager new];
+    NSData *data = [fm contentsAtPath:sourcePath];
+    
+    [[TSNetworking sharedSession] uploadInForegroundData:data
                                                   toPath:kMultipartUpload
                                     withAddtionalHeaders:nil
                                        withProgressBlock:progressBlock
@@ -343,8 +421,9 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     [completed unlock];
 }
 
-- (void)testCancelUpload
+- (void)testCancelUploadData
 {
+    return;
     __block NSCondition *completed = NSCondition.new;
     [completed lock];
     __weak typeof(self) weakSelf = self;
@@ -364,10 +443,13 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     };
     
     TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
-        NSLog(@"uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+        NSLog(@"data uploaded: %lld, total written: %lld, total expected: %lld", bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
     };
     
-    NSURLSessionUploadTask *uploadTask = [[TSNetworking backgroundSession] uploadFromFullPath:sourcePath
+    NSFileManager *fm = [NSFileManager new];
+    NSData *data = [fm contentsAtPath:sourcePath];
+    
+    NSURLSessionUploadTask *uploadTask = [[TSNetworking sharedSession] uploadInForegroundData:data
                                                                                        toPath:kMultipartUpload
                                                                          withAddtionalHeaders:nil
                                                                             withProgressBlock:progressBlock
