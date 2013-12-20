@@ -62,7 +62,9 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
         XCTAssertNotNil(resultObject, @"nil result obj");
-        [weakSelf signalFinished:completed];
+        NSURL *requestURL = request.URL;
+        XCTAssertTrue([[requestURL lastPathComponent] isEqualToString:@"something"], "path wasn't appended");
+        //[weakSelf signalFinished:completed];
     };
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
@@ -71,7 +73,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     };
     
     [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:@"something"
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
                                              withAddtionalHeaders:nil

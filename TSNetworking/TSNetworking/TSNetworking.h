@@ -34,9 +34,13 @@ typedef enum {
 } HTTP_METHOD;
 
 
-@interface TSNetworking : NSObject <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate>
+@interface TSNetworking : NSObject <NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, NSURLSessionDataDelegate>
 
 @property (nonatomic, strong) AFSecurityPolicy *securityPolicy; //The security policy used by created request operations to evaluate server trust for secure connections.
+
+@property (nonatomic, strong) NSURLSession *sharedURLSession;
+
+@property (copy) void (^sessionCompletionHandler)(); // For your AppDelegate to run when it gets notified of application:handleEventsForBackgroundURLSession:completionHandler
 
 + (TSNetworking*)sharedSession; // for regular get / post requests 
 

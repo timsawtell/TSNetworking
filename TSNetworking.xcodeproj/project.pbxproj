@@ -25,6 +25,9 @@
 		2B5E19AA185ECA32005294DC /* AFSecurityPolicy.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B5E19A9185ECA32005294DC /* AFSecurityPolicy.m */; };
 		2B763E51186012E400B7A046 /* ourLord.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2B763E50186012E400B7A046 /* ourLord.jpg */; };
 		2B763E521860142B00B7A046 /* ourLord.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 2B763E50186012E400B7A046 /* ourLord.jpg */; };
+		2B9A01541862AFB600E1412F /* Reachability.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B9A01531862AFB600E1412F /* Reachability.m */; };
+		2BA2A38B1863B62200C0964C /* Storyboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2BA2A38A1863B62200C0964C /* Storyboard.storyboard */; };
+		2BA2A38E1863B66A00C0964C /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BA2A38D1863B66A00C0964C /* ViewController.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +68,11 @@
 		2B763E4E1860069E00B7A046 /* auth.node.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = auth.node.js; sourceTree = "<group>"; };
 		2B763E4F1860082F00B7A046 /* multipart.node.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = multipart.node.js; sourceTree = "<group>"; };
 		2B763E50186012E400B7A046 /* ourLord.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = ourLord.jpg; sourceTree = "<group>"; };
+		2B9A01521862AFB600E1412F /* Reachability.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Reachability.h; sourceTree = "<group>"; };
+		2B9A01531862AFB600E1412F /* Reachability.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = Reachability.m; sourceTree = "<group>"; };
+		2BA2A38A1863B62200C0964C /* Storyboard.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; path = Storyboard.storyboard; sourceTree = "<group>"; };
+		2BA2A38C1863B66A00C0964C /* ViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		2BA2A38D1863B66A00C0964C /* ViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -129,6 +137,9 @@
 				2B1AC014185E81490065CD8B /* AppDelegate.m */,
 				2B1AC016185E81490065CD8B /* Images.xcassets */,
 				2B1AC00B185E81490065CD8B /* Supporting Files */,
+				2BA2A38A1863B62200C0964C /* Storyboard.storyboard */,
+				2BA2A38C1863B66A00C0964C /* ViewController.h */,
+				2BA2A38D1863B66A00C0964C /* ViewController.m */,
 			);
 			path = TSNetworking;
 			sourceTree = "<group>";
@@ -176,6 +187,8 @@
 				2B5E19A9185ECA32005294DC /* AFSecurityPolicy.m */,
 				2B58463A185FC4D100E1C028 /* NSError+Factory.h */,
 				2B58463B185FC4D100E1C028 /* NSError+Factory.m */,
+				2B9A01521862AFB600E1412F /* Reachability.h */,
+				2B9A01531862AFB600E1412F /* Reachability.m */,
 			);
 			path = TSNetworking;
 			sourceTree = "<group>";
@@ -227,6 +240,13 @@
 				LastUpgradeCheck = 0500;
 				ORGANIZATIONNAME = "Sawtell Software";
 				TargetAttributes = {
+					2B1AC000185E81490065CD8B = {
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 0;
+							};
+						};
+					};
 					2B1AC01B185E81490065CD8B = {
 						TestTargetID = 2B1AC000185E81490065CD8B;
 					};
@@ -256,6 +276,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2B763E521860142B00B7A046 /* ourLord.jpg in Resources */,
+				2BA2A38B1863B62200C0964C /* Storyboard.storyboard in Resources */,
 				2B1AC00F185E81490065CD8B /* InfoPlist.strings in Resources */,
 				2B1AC017185E81490065CD8B /* Images.xcassets in Resources */,
 			);
@@ -279,7 +300,9 @@
 			files = (
 				2B58463C185FC4D100E1C028 /* NSError+Factory.m in Sources */,
 				2B5E19A7185EB3FB005294DC /* Base64.m in Sources */,
+				2BA2A38E1863B66A00C0964C /* ViewController.m in Sources */,
 				2B5E19AA185ECA32005294DC /* AFSecurityPolicy.m in Sources */,
+				2B9A01541862AFB600E1412F /* Reachability.m in Sources */,
 				2B1AC039185E83110065CD8B /* TSNetworking.m in Sources */,
 				2B1AC015185E81490065CD8B /* AppDelegate.m in Sources */,
 				2B1AC011185E81490065CD8B /* main.m in Sources */,
