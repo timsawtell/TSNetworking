@@ -92,25 +92,32 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 {
     Reachability *reachability = notification.object;
     if (NotReachable != reachability.currentReachabilityStatus) {
-        for (NSString *key in self.downloadsToResume) {
-            NSData *downloadedData = [self.downloadsToResume objectForKey:key];
-            // get the old completion blocks and progress blocks
-            NSNumber *dictKey = [NSNumber numberWithInteger:key.integerValue];
-            TSNetworkDownloadTaskProgressBlock progress = [self.downloadProgressBlocks objectForKey:dictKey];
-            URLSessionDownloadTaskCompletion completion = [self.downloadCompletedBlocks objectForKey:dictKey];
-            [self.downloadProgressBlocks removeObjectForKey:dictKey];
-            [self.downloadCompletedBlocks removeObjectForKey:dictKey];
-            
-            NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithResumeData:downloadedData];
-            dictKey = [NSNumber numberWithInteger:downloadTask.taskIdentifier];
-            if (NULL != progress)
-                [self.downloadProgressBlocks setObject:progress forKey:dictKey];
-            if (NULL != completion)
-                [self.downloadCompletedBlocks setObject:completion forKey:dictKey];
-            [downloadTask resume];
-        }
-        self.downloadsToResume = [NSMutableDictionary dictionary]; // clear it out
+        [self resumePausedDownloads];
     }
+}
+
+- (NSUInteger)resumePausedDownloads
+{
+    NSUInteger count = self.downloadsToResume.count;
+    for (NSString *key in self.downloadsToResume) {
+        NSData *downloadedData = [self.downloadsToResume objectForKey:key];
+        // get the old completion blocks and progress blocks
+        NSNumber *dictKey = [NSNumber numberWithInteger:key.integerValue];
+        TSNetworkDownloadTaskProgressBlock progress = [self.downloadProgressBlocks objectForKey:dictKey];
+        URLSessionDownloadTaskCompletion completion = [self.downloadCompletedBlocks objectForKey:dictKey];
+        [self.downloadProgressBlocks removeObjectForKey:dictKey];
+        [self.downloadCompletedBlocks removeObjectForKey:dictKey];
+        
+        NSURLSessionDownloadTask *downloadTask = [self.sharedURLSession downloadTaskWithResumeData:downloadedData];
+        dictKey = [NSNumber numberWithInteger:downloadTask.taskIdentifier];
+        if (NULL != progress)
+            [self.downloadProgressBlocks setObject:progress forKey:dictKey];
+        if (NULL != completion)
+            [self.downloadCompletedBlocks setObject:completion forKey:dictKey];
+        [downloadTask resume];
+    }
+    self.downloadsToResume = [NSMutableDictionary dictionary]; // clear it out
+    return count;
 }
 
 #pragma mark - Helpers

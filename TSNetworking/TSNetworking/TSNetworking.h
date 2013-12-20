@@ -55,6 +55,8 @@ typedef enum {
 
 - (void)removeAllSessionHeaders;
 
+- (NSUInteger)resumePausedDownloads; // returns the number of downloads that were resumed
+
 /*
  * Perform a HTTP task, i.e. POST, GET, DELETE.
  * These tasks do not run in the background, they are run with session type defaultSessionConfiguration

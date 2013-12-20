@@ -8,26 +8,28 @@
 
 #import "AppDelegate.h"
 #import "TSNetworking.h"
+#import "Reachability.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     NSLog(@"Run the unit tests intstead!");
-    
-    [[UIApplication sharedApplication] setMinimumBackgroundFetchInterval:5];    
+    [[UIApplication sharedApplication] setMinimumBackgroundFetchInterval:UIApplicationBackgroundFetchIntervalMinimum];
     return YES;
 }
 
-
-- (void)applicationDidEnterBackground:(UIApplication *)application
+- (void)application:(UIApplication *)application performFetchWithCompletionHandler:(void (^)(UIBackgroundFetchResult))completionHandler
 {
-    NSLog(@"entered background (no more NSLogs)");
-}
-
-- (void)applicationWillTerminate:(UIApplication *)application
-{
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    Reachability *reachability = [Reachability reachabilityForInternetConnection];
+    if (NotReachable != reachability.currentReachabilityStatus) {
+        NSUInteger count = [[TSNetworking sharedSession] resumePausedDownloads];
+        if (count > 0) {
+            completionHandler(UIBackgroundFetchResultNewData);
+        } else {
+            completionHandler(UIBackgroundFetchResultNoData);
+        }
+    }
 }
 
 - (void)application:(UIApplication *)application
