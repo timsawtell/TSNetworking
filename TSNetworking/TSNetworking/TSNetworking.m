@@ -650,24 +650,17 @@ totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
  didResumeAtOffset:(int64_t)fileOffset
 expectedTotalBytes:(int64_t)expectedTotalBytes
 {
-    // the hills are alive with the sound of the fucks I don't give
+    // todo: give a shit
 }
 
 #pragma mark - NSURLSessionDelegate
 
 - (void)URLSessionDidFinishEventsForBackgroundURLSession:(NSURLSession *)session
 {
-    NSLog(@"Background URL session %@ finished events.\n", session);
-    UILocalNotification *notif = [[UILocalNotification alloc] init];
-    notif.alertBody = @"URLSessionDidFinishEventsForBackgroundURLSession";
-    notif.fireDate = [[NSDate date] dateByAddingTimeInterval:1];
-    [[UIApplication sharedApplication] scheduleLocalNotification:notif];
-    
     if (NULL != self.sessionCompletionHandler) {
         self.sessionCompletionHandler();
         self.sessionCompletionHandler = NULL;
     }
-    
 }
 
 @end

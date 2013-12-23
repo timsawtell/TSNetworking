@@ -64,7 +64,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         XCTAssertNotNil(resultObject, @"nil result obj");
         NSURL *requestURL = request.URL;
         XCTAssertTrue([[requestURL lastPathComponent] isEqualToString:@"something"], "path wasn't appended");
-        //[weakSelf signalFinished:completed];
+        [weakSelf signalFinished:completed];
     };
     
     TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {

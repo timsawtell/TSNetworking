@@ -9,6 +9,21 @@ Because I wanted to see how NSURLSession worked.
     pod 'TSNetworking'
 
 
+## AppDelegate.m
+
+Be sure to add this to your app delegate. It will ensure that your uploads/downloads that finish when the app has been suspended run their completion blocks.
+
+
+    #import "TSNetworking.h"
+    
+    - (void)application:(UIApplication *)application
+    handleEventsForBackgroundURLSession:(NSString *)identifier
+    completionHandler:(void (^)())completionHandler
+    {
+      [TSNetworking backgroundSession].sessionCompletionHandler = completionHandler;
+    }
+
+
 ## Initialising:
 
     [[TSNetworking sharedSession] setBaseURLString:kBaseURLString];

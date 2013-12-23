@@ -243,7 +243,7 @@
 					2B1AC000185E81490065CD8B = {
 						SystemCapabilities = {
 							com.apple.BackgroundModes = {
-								enabled = 1;
+								enabled = 0;
 							};
 						};
 					};
