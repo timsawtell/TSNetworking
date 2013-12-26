@@ -17,7 +17,6 @@
 #import "Base64.h"
 #import "NSError+Factory.h"
 #import "Reachability.h"
-#import "AppDelegate.h"
 
 typedef void(^URLSessionTaskCompletion)(NSData *data, NSURLResponse *response, NSError *error);
 typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error);
