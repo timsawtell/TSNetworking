@@ -14,7 +14,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#import "AFSecurityPolicy.h"
+#import <AFSecurityPolicy.h>
 
 #define ASSIGN_NOT_NIL(property, val) ({id __val = (val); if (__val != [NSNull null] && __val != nil) { property = val;}})
 typedef void(^TSNetworkSuccessBlock)(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response);
