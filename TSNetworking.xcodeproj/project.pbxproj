@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		29821DBD80A04B8793F91C26 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 62349FA5419243DD807D6909 /* libPods.a */; };
 		2B1AC005185E81490065CD8B /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B1AC004185E81490065CD8B /* Foundation.framework */; };
 		2B1AC007185E81490065CD8B /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B1AC006185E81490065CD8B /* CoreGraphics.framework */; };
 		2B1AC009185E81490065CD8B /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 2B1AC008185E81490065CD8B /* UIKit.framework */; };
@@ -27,7 +26,8 @@
 		2BA2A38B1863B62200C0964C /* Storyboard.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 2BA2A38A1863B62200C0964C /* Storyboard.storyboard */; };
 		2BA2A38E1863B66A00C0964C /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 2BA2A38D1863B66A00C0964C /* ViewController.m */; };
 		4B2BCFAB1894C91C0063D64D /* TSNetworking.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B1AC038185E83110065CD8B /* TSNetworking.m */; };
-		67461BA451084924B38AD19F /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 5C1637F33D5A4F16AB988B81 /* libPods.a */; };
+		E85A351CD92042E3A0D7ADF7 /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 62349FA5419243DD807D6909 /* libPods.a */; };
+		F3C9B300090A4FB79469535F /* libPods.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 62349FA5419243DD807D6909 /* libPods.a */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -85,7 +85,7 @@
 				2B1AC007185E81490065CD8B /* CoreGraphics.framework in Frameworks */,
 				2B1AC009185E81490065CD8B /* UIKit.framework in Frameworks */,
 				2B1AC005185E81490065CD8B /* Foundation.framework in Frameworks */,
-				29821DBD80A04B8793F91C26 /* libPods.a in Frameworks */,
+				E85A351CD92042E3A0D7ADF7 /* libPods.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,7 +96,7 @@
 				2B1AC01E185E81490065CD8B /* XCTest.framework in Frameworks */,
 				2B1AC020185E81490065CD8B /* UIKit.framework in Frameworks */,
 				2B1AC01F185E81490065CD8B /* Foundation.framework in Frameworks */,
-				67461BA451084924B38AD19F /* libPods.a in Frameworks */,
+				F3C9B300090A4FB79469535F /* libPods.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -317,6 +317,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/Pods/Pods-resources.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		8068811455AC44DB8DF0B52D /* Copy Pods Resources */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -331,6 +332,7 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${SRCROOT}/Pods/Pods-resources.sh\"\n";
+			showEnvVarsInLog = 0;
 		};
 		C3BE07DDD5FC4605AA864F09 /* Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
@@ -488,6 +490,7 @@
 		};
 		2B1AC02E185E81490065CD8B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D040982A3ECC4623B3431AEE /* Pods.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -501,6 +504,7 @@
 		};
 		2B1AC02F185E81490065CD8B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D040982A3ECC4623B3431AEE /* Pods.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME = LaunchImage;
@@ -514,6 +518,7 @@
 		};
 		2B1AC031185E81490065CD8B /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D040982A3ECC4623B3431AEE /* Pods.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
 				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/TSNetworking.app/TSNetworking";
@@ -537,6 +542,7 @@
 		};
 		2B1AC032185E81490065CD8B /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = D040982A3ECC4623B3431AEE /* Pods.xcconfig */;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_INCLUDING_64_BIT)";
 				BUNDLE_LOADER = "$(BUILT_PRODUCTS_DIR)/TSNetworking.app/TSNetworking";

@@ -26,10 +26,10 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
 @end
 
 #warning if you want these tests to work you need to install node.js on your machine.
-/* after you install node.js, run these 3 files (from the TSNetworkTests directory) in 3 separate terminal sessions
- node auth.node.js
- node noauth.node.js
- node multipart.node.js
+/*
+ install instruction found at http://nodejs.org/
+ once node is installed, you need node package manager (npm). Pretty sure it comes with node.js
+ You need the node library `formidable`, install with "npm install formidable"
  */
 
 @implementation TSNetworkingTests
