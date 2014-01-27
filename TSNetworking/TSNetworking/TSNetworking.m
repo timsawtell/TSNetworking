@@ -292,8 +292,10 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                             withSuccess:(TSNetworkSuccessBlock)successBlock
                               withError:(TSNetworkErrorBlock)errorBlock
 {
+#ifdef DEBUG
     NSAssert(nil != self.baseURL, @"Base URL is nil");
     NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
+#endif
     NSURL *requestURL = self.baseURL;
     if (nil != path) {
         requestURL = [self.baseURL URLByAppendingPathComponent:path];
@@ -369,9 +371,10 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                                        withSuccess:(TSNetworkSuccessBlock)successBlock
                                          withError:(TSNetworkErrorBlock)errorBlock
 {
+#ifdef DEBUG
     NSAssert(nil != sourcePath, @"You need a sourcePath");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
-    
+#endif
     NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:sourcePath]];
     request.HTTPMethod = @"GET";
     
@@ -460,10 +463,11 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                                                 withSuccess:(TSNetworkSuccessBlock)successBlock
                                                   withError:(TSNetworkErrorBlock)errorBlock
 {
+#ifdef DEBUG
     NSAssert(self.isBackgroundConfig, @"Must be run in backgroundSession, not sharedSession");
     NSAssert(nil != sourcePath, @"You need a sourcePath");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
-    
+#endif
     NSFileManager *fm = [NSFileManager new];
     NSError *error;
     if (![fm fileExistsAtPath:sourcePath isDirectory:NO]) {
@@ -504,10 +508,11 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                                        withSuccess:(TSNetworkSuccessBlock)successBlock
                                          withError:(TSNetworkErrorBlock)errorBlock
 {
+#ifdef DEBUG
     NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
     NSAssert(nil != data, @"You need source data");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
-    
+#endif
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:destinationPath]];
     [request setHTTPMethod:@"POST"];
     __weak typeof(request) weakRequest = request;
