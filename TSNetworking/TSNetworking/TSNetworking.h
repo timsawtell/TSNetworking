@@ -97,7 +97,7 @@ typedef enum {
 
 /*
  * Upload NSData to a URL. This is NOT a background task. If you want to upload
- * as a background task, please use the uploadFromFullPath:... method, as that 
+ * as a background task, please use the uploadInBackgroundFromLocalPath:... method, as that
  * will guarantee a background upload
  */
 - (NSURLSessionUploadTask *)uploadInForegroundData:(NSData *)data

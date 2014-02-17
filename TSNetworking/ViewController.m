@@ -15,21 +15,10 @@
 
 @implementation ViewController
 
-- (void)viewDidLoad
-{
-    NSString *color = [[NSUserDefaults standardUserDefaults] objectForKey:@"bgColor"];
-    self.view.backgroundColor = color == nil ? [UIColor whiteColor] : [UIColor redColor];
-}
-
-
 - (IBAction)buttonTouched:(id)sender
 {
-    [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"bgColor"];
-    self.view.backgroundColor = [UIColor whiteColor];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    
     NSString *destinationPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
-    destinationPath = [destinationPath stringByAppendingPathComponent:@"5megs.jpg"];
+    destinationPath = [destinationPath stringByAppendingPathComponent:@"ourLord.jpeg"];
     
     __weak typeof(self)weakSelf = self;
     
@@ -52,18 +41,51 @@
             notif.fireDate = [[NSDate date] dateByAddingTimeInterval:1];
             [[UIApplication sharedApplication] scheduleLocalNotification:notif];
             NSLog(@"Successfully finished download");
-            weakSelf.view.backgroundColor = [UIColor redColor];
-            [[NSUserDefaults standardUserDefaults] setObject:@"red" forKey:@"bgColor"];
-            [[NSUserDefaults standardUserDefaults] synchronize];
         });
     };
     
-    [[TSNetworking backgroundSession] downloadFromFullPath:@"http://upload.wikimedia.org/wikipedia/commons/2/2d/Snake_River_%285mb%29.jpg"
+    [[TSNetworking backgroundSession] downloadFromFullPath:@"http://images.dailytech.com/nimage/gabe_newell.jpeg"
                                                     toPath:destinationPath
                                       withAddtionalHeaders:nil
                                          withProgressBlock:progress
                                                withSuccess:success
                                                  withError:error];
+}
+
+- (IBAction)simpleGetTouched:(id)sender
+{
+    TSNetworkErrorBlock error = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"Error with request: %@", error.localizedDescription);
+    };
+    
+    TSNetworkSuccessBlock success = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"Simple get finished with: %@\n\n", resultObject);
+    };
+    
+    [[TSNetworking sharedSession] setBaseURLString:@"http://stackoverflow.com/questions/12073776/iphone-convert-text-from-iso-8859-1-latin-1-encoding"];
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+                                                       withMethod:HTTP_METHOD_GET
+                                                   withParameters:nil
+                                             withAddtionalHeaders:nil
+                                                      withSuccess:success withError:error];
+}
+
+- (IBAction)simpleGetWithParamsTouched:(id)sender
+{
+    TSNetworkErrorBlock error = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"Error with request: %@", error.localizedDescription);
+    };
+    
+    TSNetworkSuccessBlock success = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"Simple get with params finished with: %@\n\n", resultObject);
+    };
+    
+    [[TSNetworking sharedSession] setBaseURLString:@"http://www.google.com"];
+    [[TSNetworking sharedSession] performDataTaskWithRelativePath:@"/search"
+                                                       withMethod:HTTP_METHOD_GET
+                                                   withParameters:@{@"q":@"Gabe Newell"}
+                                             withAddtionalHeaders:nil
+                                                      withSuccess:success withError:error];
 }
 
 @end

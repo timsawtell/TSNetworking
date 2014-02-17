@@ -35,6 +35,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 @property (nonatomic, copy) NSString *username;
 @property (nonatomic, copy) NSString *password;
 @property (nonatomic) BOOL isBackgroundConfig;
+@property (nonatomic) NSUInteger activeTasks;
 
 @end
 
@@ -66,6 +67,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         _isBackgroundConfig = background;
         _sessionHeaders = [NSMutableDictionary dictionary];
         _downloadsToResume = [NSMutableDictionary dictionary];
+        _activeTasks = 0;
         
         [[NSNotificationCenter defaultCenter] addObserver: self selector:@selector(handleNetworkChange:) name: kReachabilityChangedNotification object: nil];
         Reachability *reachability = [Reachability reachabilityForInternetConnection];
@@ -131,7 +133,11 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     __weak typeof(self)weakSelf = self;
     URLSessionTaskCompletion completionBlock = ^(NSData *data, NSURLResponse *response, NSError *error) {
         NSString *contentType;
-        
+        weakSelf.activeTasks = MAX(weakSelf.activeTasks - 1, 0);
+        if ([TSNetworking sharedSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
+            [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+        }
+        NSStringEncoding stringEncoding = NSUTF8StringEncoding;
         if ([response isKindOfClass:[NSHTTPURLResponse class]]) {
             NSHTTPURLResponse *httpResponse = (NSHTTPURLResponse *)response;
             NSDictionary *responseHeaders = [httpResponse allHeaderFields];
@@ -143,6 +149,13 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                     contentType = [contentType substringToIndex:indexOfSemi.location];
                 }
             }
+            
+            if (response.textEncodingName) {
+                CFStringEncoding encoding = CFStringConvertIANACharSetNameToEncoding((CFStringRef)response.textEncodingName);
+                if (encoding != kCFStringEncodingInvalidId) {
+                    stringEncoding = CFStringConvertEncodingToNSStringEncoding(encoding);
+                }
+            }
         }
         // if there is no result data, and there is an error, make the parsed object the error's localizedDescription
         NSObject *parsedObject;
@@ -150,6 +163,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
             parsedObject = error.localizedDescription;
         } else {
             parsedObject = [weakSelf resultBasedOnContentType:contentType
+                                                 withEncoding:stringEncoding 
                                                      fromData:data];
         }
         
@@ -174,6 +188,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
  * return an NSSting for text/
  */
 - (NSObject *)resultBasedOnContentType:(NSString *)contentType
+                          withEncoding:(NSStringEncoding)encoding
                               fromData:(NSData *)data
 {
     if (nil == contentType) {
@@ -196,8 +211,10 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
             return parsedJson;
         }
     } else if ([firstComponent isEqualToString:@"text"]) {
-        NSString *parsedString = [[NSString alloc] initWithData:data
-                                                       encoding:NSUTF8StringEncoding];
+        NSString *parsedString;
+        parsedString = [[NSString alloc] initWithData:data
+                                             encoding:encoding];
+        
         return parsedString;
     }
     
@@ -265,7 +282,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 
 - (void)setBaseURLString:(NSString *)baseURLString
 {
-    self.baseURL = [NSURL URLWithString:baseURLString];
+    self.baseURL = [NSURL URLWithString:[baseURLString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 }
 
 - (void)setBasicAuthUsername:(NSString *)username
@@ -347,7 +364,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                         urlString = [urlString stringByAppendingFormat:@"&%@=%@", key, [parameters valueForKey:key]];
                     }
                 }
-                [request setURL:[NSURL URLWithString:urlString]];
+                [request setURL:[NSURL URLWithString:[urlString stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]];
             }
             break;
         }
@@ -361,6 +378,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     [self addHeaders:headers toRequest:request];
     NSURLSessionDataTask *task = [self.sharedURLSession dataTaskWithRequest:request
                                                           completionHandler:completionBlock];
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+    self.activeTasks++;
     [task resume];
 }
 
@@ -375,12 +394,17 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     NSAssert(nil != sourcePath, @"You need a sourcePath");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
 #endif
-    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:sourcePath]];
+    NSMutableURLRequest *request = [[NSMutableURLRequest alloc] initWithURL:[NSURL URLWithString:[sourcePath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]];
     request.HTTPMethod = @"GET";
     
     __weak typeof(request) weakRequest = request;
+    __weak typeof(self) weakSelf = self;
     // download completion blocks are different from data type completion blocks
     URLSessionDownloadTaskCompletion completionBlock = ^(NSURL *location, NSError *error) {
+        weakSelf.activeTasks = MAX(weakSelf.activeTasks - 1, 0);
+        if ([TSNetworking sharedSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
+            [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+        }
         if (nil != error) {
             if (NULL != errorBlock) {
                 errorBlock(nil, error, weakRequest, nil);
@@ -452,6 +476,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     }
     [self.downloadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInteger:downloadTask.taskIdentifier]];
     
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+    self.activeTasks++;
     [downloadTask resume];
     return downloadTask;
 }
@@ -481,7 +507,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         return nil;
     }
     
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:destinationPath]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[destinationPath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]];
     [request setHTTPMethod:@"POST"];
     __weak typeof(request) weakRequest = request;
     URLSessionTaskCompletion completionBlock = [self taskCompletionBlockForRequest:weakRequest
@@ -496,6 +522,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     if (NULL != completionBlock) {
         [self.uploadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInteger:uploadTask.taskIdentifier]];
     }
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+    self.activeTasks++;
     [uploadTask resume];
 
     return uploadTask;
@@ -513,7 +541,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     NSAssert(nil != data, @"You need source data");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
 #endif
-    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:destinationPath]];
+    NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:[NSURL URLWithString:[destinationPath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]]];
     [request setHTTPMethod:@"POST"];
     __weak typeof(request) weakRequest = request;
     URLSessionTaskCompletion completionBlock = [self taskCompletionBlockForRequest:weakRequest
@@ -528,7 +556,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     if (NULL != completionBlock) {
         [self.uploadCompletedBlocks setObject:completionBlock forKey:[NSNumber numberWithInteger:uploadTask.taskIdentifier]];
     }
-    
+    [UIApplication sharedApplication].networkActivityIndicatorVisible = YES;
+    self.activeTasks++;
     [uploadTask resume];
     return uploadTask;
 }
