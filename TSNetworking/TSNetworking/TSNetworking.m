@@ -302,6 +302,26 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     self.sessionHeaders = [NSMutableDictionary dictionary];
 }
 
+- (void)addDownloadProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
+          toExistingDownloadTask:(NSURLSessionDownloadTask *)task
+{
+    if (NSURLSessionTaskStateSuspended >= task.state) {
+        if (NULL != progressBlock) {
+            [self.downloadProgressBlocks setObject:progressBlock forKey:[NSNumber numberWithInteger:task.taskIdentifier]];
+        }
+    }
+}
+
+- (void)addUploadProgressBlock:(TSNetworkUploadTaskProgressBlock)progressBlock
+          toExistingUploadTask:(NSURLSessionUploadTask *)task
+{
+    if (NSURLSessionTaskStateSuspended >= task.state) {
+        if (NULL != progressBlock) {
+            [self.uploadProgressBlocks setObject:progressBlock forKey:[NSNumber numberWithInteger:task.taskIdentifier]];
+        }
+    }
+}
+
 - (void)performDataTaskWithRelativePath:(NSString *)path
                              withMethod:(HTTP_METHOD)method
                          withParameters:(NSDictionary *)parameters
@@ -485,7 +505,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 - (NSURLSessionUploadTask *)uploadInBackgroundFromLocalPath:(NSString *)sourcePath
                                                      toPath:(NSString *)destinationPath
                                        withAddtionalHeaders:(NSDictionary *)headers
-                                          withProgressBlock:(id)progressBlock
+                                          withProgressBlock:(TSNetworkUploadTaskProgressBlock)progressBlock
                                                 withSuccess:(TSNetworkSuccessBlock)successBlock
                                                   withError:(TSNetworkErrorBlock)errorBlock
 {
@@ -532,7 +552,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 - (NSURLSessionUploadTask *)uploadInForegroundData:(NSData *)data
                                             toPath:(NSString *)destinationPath
                               withAddtionalHeaders:(NSDictionary *)headers
-                                 withProgressBlock:(id)progressBlock
+                                 withProgressBlock:(TSNetworkUploadTaskProgressBlock)progressBlock
                                        withSuccess:(TSNetworkSuccessBlock)successBlock
                                          withError:(TSNetworkErrorBlock)errorBlock
 {

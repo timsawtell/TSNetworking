@@ -57,6 +57,12 @@ typedef enum {
 
 - (NSUInteger)resumePausedDownloads; // returns the number of downloads that were resumed
 
+- (void)addDownloadProgressBlock:(TSNetworkDownloadTaskProgressBlock)progressBlock
+          toExistingDownloadTask:(NSURLSessionDownloadTask *)task;
+
+- (void)addUploadProgressBlock:(TSNetworkUploadTaskProgressBlock)progressBlock
+          toExistingUploadTask:(NSURLSessionUploadTask *)task;
+
 /*
  * Perform a HTTP task, i.e. POST, GET, DELETE.
  * These tasks do not run in the background, they are run with session type defaultSessionConfiguration
@@ -91,7 +97,7 @@ typedef enum {
 - (NSURLSessionUploadTask *)uploadInBackgroundFromLocalPath:(NSString *)sourcePath
                                                      toPath:(NSString *)destinationPath
                                        withAddtionalHeaders:(NSDictionary *)headers
-                                          withProgressBlock:(id)progressBlock
+                                          withProgressBlock:(TSNetworkUploadTaskProgressBlock)progressBlock
                                                 withSuccess:(TSNetworkSuccessBlock)successBlock
                                                   withError:(TSNetworkErrorBlock)errorBlock;
 
@@ -103,7 +109,7 @@ typedef enum {
 - (NSURLSessionUploadTask *)uploadInForegroundData:(NSData *)data
                                             toPath:(NSString *)destinationPath
                               withAddtionalHeaders:(NSDictionary *)headers
-                                 withProgressBlock:(id)progressBlock
+                                 withProgressBlock:(TSNetworkUploadTaskProgressBlock)progressBlock
                                        withSuccess:(TSNetworkSuccessBlock)successBlock
                                          withError:(TSNetworkErrorBlock)errorBlock;
 

@@ -425,7 +425,6 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
 
 - (void)testCancelUploadData
 {
-    return;
     __block NSCondition *completed = NSCondition.new;
     [completed lock];
     __weak typeof(self) weakSelf = self;
@@ -463,6 +462,87 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     dispatch_after(popTime, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(void){
         [uploadTask cancel];
     });
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+- (void)testAddDownloadProgressBlock
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    
+    NSString *destinationPath = [NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    destinationPath = [destinationPath stringByAppendingPathComponent:@"ourLord.jpeg"];
+    
+    __block NSFileManager *fm = [NSFileManager new];
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
+        [fm removeItemAtPath:destinationPath error:nil];
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(error, @"nil error obj");
+        NSLog(@"%@", error.localizedDescription);
+        [fm removeItemAtPath:destinationPath error:&error];
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"The progress block ran after being added!");
+    };
+    
+    NSURLSessionDownloadTask *task = [[TSNetworking backgroundSession] downloadFromFullPath:@"http://images.dailytech.com/nimage/gabe_newell.jpeg"
+                                                                                     toPath:destinationPath
+                                                                       withAddtionalHeaders:nil
+                                                                          withProgressBlock:nil
+                                                                                withSuccess:successBlock
+                                                                                  withError:errorBlock];
+    
+    [[TSNetworking backgroundSession] addDownloadProgressBlock:progressBlock toExistingDownloadTask:task];
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+- (void)testAddUploadProgressBlock
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof(self) weakSelf = self;
+    NSString *sourcePath = [[NSBundle mainBundle] pathForResource:@"ourLord" ofType:@"jpg"];
+    XCTAssertNotNil(sourcePath, @"Couldn't find local picture of our lord");
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        NSLog(@"%@", resultObject);
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkDownloadTaskProgressBlock progressBlock = ^(int64_t bytesWritten, int64_t totalBytesWritten, int64_t totalBytesExpectedToWrite) {
+        NSLog(@"The upload progress block was added");
+    };
+    
+    NSFileManager *fm = [NSFileManager new];
+    NSData *data = [fm contentsAtPath:sourcePath];
+    
+    NSURLSessionUploadTask *task = [[TSNetworking sharedSession] uploadInForegroundData:data
+                                                                                 toPath:kMultipartUpload
+                                                                   withAddtionalHeaders:nil
+                                                                      withProgressBlock:nil
+                                                                            withSuccess:successBlock
+                                                                              withError:errorBlock];
+    
+    [[TSNetworking sharedSession] addUploadProgressBlock:progressBlock toExistingUploadTask:task];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
