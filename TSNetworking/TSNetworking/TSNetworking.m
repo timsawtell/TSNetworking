@@ -624,7 +624,9 @@ totalBytesExpectedToSend:(int64_t)totalBytesExpectedToSend
     TSNetworkUploadTaskProgressBlock progress;
     ASSIGN_NOT_NIL(progress, [self.uploadProgressBlocks objectForKey:[NSNumber numberWithInteger:task.taskIdentifier]]);
     if (NULL != progress) {
-        progress(bytesSent, totalBytesSent, totalBytesExpectedToSend);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            progress(bytesSent, totalBytesSent, totalBytesExpectedToSend);
+        });
     }
 }
 
@@ -680,7 +682,9 @@ totalBytesExpectedToWrite:(int64_t)totalBytesExpectedToWrite
     TSNetworkDownloadTaskProgressBlock progress;
     ASSIGN_NOT_NIL(progress, [self.downloadProgressBlocks objectForKey:[NSNumber numberWithInteger:downloadTask.taskIdentifier]]);
     if (NULL != progress) {
-        progress(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            progress(bytesWritten, totalBytesWritten, totalBytesExpectedToWrite);
+        });
     }
 }
 
