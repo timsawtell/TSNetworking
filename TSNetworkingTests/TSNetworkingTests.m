@@ -18,6 +18,7 @@
 
 NSString * const kNoAuthNeeded = @"http://localhost:8081";
 NSString * const kAuthNeeded = @"http://localhost:8080";
+NSString * const kJSON = @"http://localhost:8083";
 NSString * const kMultipartUpload = @"http://localhost:8082/upload";
 
 @interface TSNetworkingTests : XCTestCase
@@ -25,7 +26,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
 @property (nonatomic, strong) NSString *baseURLString;
 @end
 
-#warning if you want these tests to work you need to install node.js on your machine.
+#warning if you want these tests to work you need to install node.js on your machine and have the all .js files running before Testing this code. The .js files are located in the TSNetworkingTests folder.
 /*
  install instruction found at http://nodejs.org/
  once node is installed, you need node package manager (npm). Pretty sure it comes with node.js
@@ -543,6 +544,36 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
                                                                               withError:errorBlock];
     
     [[TSNetworking foregroundSession] addUploadProgressBlock:progressBlock toExistingUploadTask:task];
+    
+    [completed waitUntilDate:[NSDate distantFuture]];
+    [completed unlock];
+}
+
+- (void)testGetJSON
+{
+    __block NSCondition *completed = NSCondition.new;
+    [completed lock];
+    __weak typeof (self) weakSelf = self;
+    
+    TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(resultObject, @"nil result obj");
+        XCTAssertTrue([resultObject isKindOfClass:[NSDictionary class]]);
+        [weakSelf signalFinished:completed];
+    };
+    
+    TSNetworkErrorBlock errorBlock = ^(NSObject *resultObject, NSError *error, NSMutableURLRequest *request, NSURLResponse *response) {
+        XCTAssertNotNil(error, @"nil error obj");
+        XCTAssertFalse(YES, @"Shouldn't be in error block");
+        [weakSelf signalFinished:completed];
+    };
+    
+    [[TSNetworking foregroundSession] setBaseURLString:kJSON];
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
+                                                           withMethod:HTTP_METHOD_GET
+                                                       withParameters:nil
+                                                 withAddtionalHeaders:nil
+                                                          withSuccess:successBlock
+                                                            withError:errorBlock];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];
