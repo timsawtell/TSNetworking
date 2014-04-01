@@ -26,17 +26,17 @@ Be sure to add this to your app delegate. It will ensure that your uploads/downl
 
 ## Initialising:
 
-    [[TSNetworking sharedSession] setBaseURLString:kBaseURLString];
-    [[TSNetworking sharedSession] setBasicAuthUsername:nil withPassword:nil];
-    [[TSNetworking sharedSession] addSessionHeaders:@{@"all":@"nightlong"}]; // sticks around forever, used in each request
+    [[TSNetworking foregroundSession] setBaseURLString:kBaseURLString];
+    [[TSNetworking foregroundSession] setBasicAuthUsername:nil withPassword:nil];
+    [[TSNetworking foregroundSession] addSessionHeaders:@{@"all":@"nightlong"}]; // sticks around forever, used in each request
 These settings last for the app's run lifetime
 
 ## Maintaining:
 
-    [[TSNetworking sharedSession] removeAllSessionHeaders];
+    [[TSNetworking foregroundSession] removeAllSessionHeaders];
 
 ## Which one to use?
-    [TSNetworking sharedSession] /* for all your regular GETs, POSTs. You are given an NSObject as the result. 
+    [TSNetworking foregroundSession] /* for all your regular GETs, POSTs. You are given an NSObject as the result. 
     OR for uploading NSData in the foreground.  */
     - OR -
     [TSNetworking backgroundSession] /* for all your background downloads and (local NSURL) uploads. Uses funky new NSURLSession features to run while your apps if minimized, no need to pause and serialise your downloads on applicationDidEnterBackground */
@@ -70,7 +70,7 @@ Warning for young players: never reference self inside a block, use this style t
         }
     };
 
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
                                              withAddtionalHeaders:@{@"Content-Type":@"application/json"}
@@ -87,7 +87,7 @@ Warning for young players: never reference self inside a block, use this style t
         NSLog(@"%@", error.localizedDescription); // tells you what the problem was, i.e. offline
     };
     
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_POST
                                                    withParameters:@{@"key": @"value"}
                                              withAddtionalHeaders:nil
@@ -143,7 +143,7 @@ Warning for young players: never reference self inside a block, use this style t
     NSFileManager *fm = [NSFileManager new];
     NSData *data = [fm contentsAtPath:sourcePath];
     
-    [[TSNetworking sharedSession] uploadInForegroundData:data
+    [[TSNetworking foregroundSession] uploadInForegroundData:data
                                                   toPath:kMultipartUpload
                                     withAddtionalHeaders:nil
                                        withProgressBlock:progressBlock

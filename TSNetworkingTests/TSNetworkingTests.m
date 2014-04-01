@@ -72,8 +72,8 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:@"something"
+    [[TSNetworking foregroundSession] setBaseURLString:kNoAuthNeeded];
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:@"something"
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
                                              withAddtionalHeaders:nil
@@ -103,10 +103,10 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
-    [[TSNetworking sharedSession] addSessionHeaders:@{@"Accept":@"application/json"}];
+    [[TSNetworking foregroundSession] setBaseURLString:kNoAuthNeeded];
+    [[TSNetworking foregroundSession] addSessionHeaders:@{@"Accept":@"application/json"}];
     
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
                                              withAddtionalHeaders:@{@"Content-Type":@"application/json"}
@@ -135,8 +135,8 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] setBaseURLString:kNoAuthNeeded];
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:@{@"key": @"value"}
                                              withAddtionalHeaders:nil
@@ -167,10 +167,10 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:kAuthNeeded];
-    [[TSNetworking sharedSession] setBasicAuthUsername:@"hack" withPassword:@"thegibson"];
+    [[TSNetworking foregroundSession] setBaseURLString:kAuthNeeded];
+    [[TSNetworking foregroundSession] setBasicAuthUsername:@"hack" withPassword:@"thegibson"];
     
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
                                              withAddtionalHeaders:nil
@@ -202,8 +202,8 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         [weakSelf signalFinished:completed];
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:kNoAuthNeeded];
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] setBaseURLString:kNoAuthNeeded];
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_POST
                                                    withParameters:@{@"key": @"value"}
                                              withAddtionalHeaders:nil
@@ -412,7 +412,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     NSFileManager *fm = [NSFileManager new];
     NSData *data = [fm contentsAtPath:sourcePath];
     
-    [[TSNetworking sharedSession] uploadInForegroundData:data
+    [[TSNetworking foregroundSession] uploadInForegroundData:data
                                                   toPath:kMultipartUpload
                                     withAddtionalHeaders:nil
                                        withProgressBlock:progressBlock
@@ -450,7 +450,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     NSFileManager *fm = [NSFileManager new];
     NSData *data = [fm contentsAtPath:sourcePath];
     
-    NSURLSessionUploadTask *uploadTask = [[TSNetworking sharedSession] uploadInForegroundData:data
+    NSURLSessionUploadTask *uploadTask = [[TSNetworking foregroundSession] uploadInForegroundData:data
                                                                                        toPath:kMultipartUpload
                                                                          withAddtionalHeaders:nil
                                                                             withProgressBlock:progressBlock
@@ -535,14 +535,14 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     NSFileManager *fm = [NSFileManager new];
     NSData *data = [fm contentsAtPath:sourcePath];
     
-    NSURLSessionUploadTask *task = [[TSNetworking sharedSession] uploadInForegroundData:data
+    NSURLSessionUploadTask *task = [[TSNetworking foregroundSession] uploadInForegroundData:data
                                                                                  toPath:kMultipartUpload
                                                                    withAddtionalHeaders:nil
                                                                       withProgressBlock:nil
                                                                             withSuccess:successBlock
                                                                               withError:errorBlock];
     
-    [[TSNetworking sharedSession] addUploadProgressBlock:progressBlock toExistingUploadTask:task];
+    [[TSNetworking foregroundSession] addUploadProgressBlock:progressBlock toExistingUploadTask:task];
     
     [completed waitUntilDate:[NSDate distantFuture]];
     [completed unlock];

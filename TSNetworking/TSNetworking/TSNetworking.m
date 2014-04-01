@@ -134,7 +134,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     URLSessionTaskCompletion completionBlock = ^(NSData *data, NSURLResponse *response, NSError *error) {
         NSString *contentType;
         weakSelf.activeTasks = MAX(weakSelf.activeTasks - 1, 0);
-        if ([TSNetworking sharedSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
+        if ([TSNetworking foregroundSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
             [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
         }
         NSStringEncoding stringEncoding = NSUTF8StringEncoding;
@@ -258,7 +258,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 
 #pragma mark - Singletons
 
-+ (TSNetworking *)sharedSession
++ (TSNetworking *)foregroundSession
 {
     static dispatch_once_t once;
     static TSNetworking *sharedSession;
@@ -422,7 +422,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     // download completion blocks are different from data type completion blocks
     URLSessionDownloadTaskCompletion completionBlock = ^(NSURL *location, NSError *error) {
         weakSelf.activeTasks = MAX(weakSelf.activeTasks - 1, 0);
-        if ([TSNetworking sharedSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
+        if ([TSNetworking foregroundSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
             [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
         }
         if (nil != error) {

@@ -62,8 +62,8 @@
         NSLog(@"Simple get finished with: %@\n\n", resultObject);
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:@"http://stackoverflow.com/questions/12073776/iphone-convert-text-from-iso-8859-1-latin-1-encoding"];
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:nil
+    [[TSNetworking foregroundSession] setBaseURLString:@"http://stackoverflow.com/questions/12073776/iphone-convert-text-from-iso-8859-1-latin-1-encoding"];
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:nil
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:nil
                                              withAddtionalHeaders:nil
@@ -80,8 +80,8 @@
         NSLog(@"Simple get with params finished with: %@\n\n", resultObject);
     };
     
-    [[TSNetworking sharedSession] setBaseURLString:@"http://www.google.com"];
-    [[TSNetworking sharedSession] performDataTaskWithRelativePath:@"/search"
+    [[TSNetworking foregroundSession] setBaseURLString:@"http://www.google.com"];
+    [[TSNetworking foregroundSession] performDataTaskWithRelativePath:@"/search"
                                                        withMethod:HTTP_METHOD_GET
                                                    withParameters:@{@"q":@"Gabe Newell"}
                                              withAddtionalHeaders:nil

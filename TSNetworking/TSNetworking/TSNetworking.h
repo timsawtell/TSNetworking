@@ -42,7 +42,7 @@ typedef enum {
 
 @property (copy) void (^sessionCompletionHandler)(); // For your AppDelegate to run when it gets notified of application:handleEventsForBackgroundURLSession:completionHandler
 
-+ (TSNetworking*)sharedSession; // for regular get / post requests 
++ (TSNetworking*)foregroundSession; // for regular get / post requests 
 
 + (TSNetworking *)backgroundSession; // for uploads and downloads
 
