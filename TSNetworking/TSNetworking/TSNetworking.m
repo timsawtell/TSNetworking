@@ -93,7 +93,9 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 {
     Reachability *reachability = notification.object;
     if (NotReachable != reachability.currentReachabilityStatus) {
-        [self resumePausedDownloads];
+        @synchronized(self) {
+            [self resumePausedDownloads];
+        }
     }
 }
 
@@ -165,8 +167,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
             parsedObject = error.localizedDescription;
         } else {
             parsedObject = [strongSelf resultBasedOnContentType:contentType
-                                                 withEncoding:stringEncoding 
-                                                     fromData:data];
+                                                   withEncoding:stringEncoding
+                                                       fromData:data];
         }
         
         [strongSelf validateResponse:(NSHTTPURLResponse *)response error:&error];
@@ -263,11 +265,11 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 + (TSNetworking *)foregroundSession
 {
     static dispatch_once_t once;
-    static TSNetworking *sharedSession;
+    static TSNetworking *foregroundSession;
     dispatch_once(&once, ^{
-        sharedSession = [[self alloc] initWithBackground:NO];
+        foregroundSession = [[self alloc] initWithBackground:NO];
     });
-    return sharedSession;
+    return foregroundSession;
 }
 
 + (TSNetworking *)backgroundSession
@@ -324,6 +326,32 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     }
 }
 
+- (void)removeQueuedDownloadForTask:(NSURLSessionDownloadTask *)task
+{
+    // Use case that this covers: you lose network connection while a download is in progress. TSNetworking adds the downloaded data
+    // to downloadsToResume. You then cancel the download while you are offline (through UI). We need to remove the saved
+    // data in downloadsToResume for this download task so that it doesn't automatically start again when we finally get network
+    // access again (dl starts again in - (NSInteger)resumePausedDownloads;)
+    for (id key in self.downloadsToResume) {
+        if (![key isKindOfClass:[NSNumber class]]) {
+            return;
+        }
+        NSInteger keyInt = [key integerValue];
+        if (task.taskIdentifier == keyInt) {
+            self.activeTasks = MAX(self.activeTasks - 1, 0);
+            if ([TSNetworking foregroundSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
+                [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
+            }
+            break;
+        }
+    }
+    
+    NSNumber *dictKey = [NSNumber numberWithInteger:task.taskIdentifier];
+    [self.downloadProgressBlocks removeObjectForKey:dictKey];
+    [self.downloadCompletedBlocks removeObjectForKey:dictKey];
+    [self.downloadsToResume removeObjectForKey:dictKey];
+}
+
 - (void)performDataTaskWithRelativePath:(NSString *)path
                              withMethod:(HTTP_METHOD)method
                          withParameters:(NSDictionary *)parameters
@@ -333,7 +361,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 {
 #ifdef DEBUG
     NSAssert(nil != self.baseURL, @"Base URL is nil");
-    NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
+    NSAssert(!self.isBackgroundConfig, @"Must be run in foregroundSession, not backgroundSession");
 #endif
     NSURL *requestURL = self.baseURL;
     if (nil != path) {
@@ -514,7 +542,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                                                   withError:(TSNetworkErrorBlock)errorBlock
 {
 #ifdef DEBUG
-    NSAssert(self.isBackgroundConfig, @"Must be run in backgroundSession, not sharedSession");
+    NSAssert(self.isBackgroundConfig, @"Must be run in backgroundSession, not foregroundSession");
     NSAssert(nil != sourcePath, @"You need a sourcePath");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
 #endif
@@ -561,7 +589,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
                                          withError:(TSNetworkErrorBlock)errorBlock
 {
 #ifdef DEBUG
-    NSAssert(!self.isBackgroundConfig, @"Must be run in sharedSession, not backgroundSession");
+    NSAssert(!self.isBackgroundConfig, @"Must be run in foregroundSession, not backgroundSession");
     NSAssert(nil != data, @"You need source data");
     NSAssert(nil != destinationPath, @"You need a destinationPath");
 #endif
@@ -652,11 +680,10 @@ didCompleteWithError:(NSError *)error
         if (nil != downloadData) {
             if (NotReachable != [[Reachability reachabilityForInternetConnection] currentReachabilityStatus]) {
                 [self.sharedURLSession downloadTaskWithResumeData:downloadData];
-                return;
             } else {
                 [self.downloadsToResume setObject:downloadData forKey:[NSNumber numberWithInteger:task.taskIdentifier]];
-                return;
             }
+            return;
         }
     }
     NSNumber *taskKey = [NSNumber numberWithInteger:task.taskIdentifier];
