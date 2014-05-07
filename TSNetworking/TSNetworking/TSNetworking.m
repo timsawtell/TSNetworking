@@ -59,8 +59,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         _downloadCompletedBlocks = [NSMutableDictionary dictionary];
         
         _sharedURLSession = [NSURLSession sessionWithConfiguration:_defaultConfiguration
-                                                      delegate:self
-                                                 delegateQueue:nil];
+                                                          delegate:self
+                                                     delegateQueue:nil];
         
         _securityPolicy = [AFSecurityPolicy defaultPolicy];
         _acceptableStatusCodes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(200, 100)];
@@ -84,8 +84,8 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 #pragma mark - Reachability
 
 /*
- * If the device goes online again, find any saved NSData from download operations and start them as 
- * new NSURLSessionDownloadTasks. Also copy across the download and progress blocks, then when they 
+ * If the device goes online again, find any saved NSData from download operations and start them as
+ * new NSURLSessionDownloadTasks. Also copy across the download and progress blocks, then when they
  * are all started again, clear out the NSData that was saved in self.downloadCompletedBlocks
  */
 
@@ -342,14 +342,13 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
             if ([TSNetworking foregroundSession].activeTasks == 0 && [TSNetworking backgroundSession].activeTasks == 0) {
                 [UIApplication sharedApplication].networkActivityIndicatorVisible = NO;
             }
+            NSNumber *dictKey = [NSNumber numberWithInteger:task.taskIdentifier];
+            [self.downloadProgressBlocks removeObjectForKey:dictKey];
+            [self.downloadCompletedBlocks removeObjectForKey:dictKey];
+            [self.downloadsToResume removeObjectForKey:dictKey];
             break;
         }
     }
-    
-    NSNumber *dictKey = [NSNumber numberWithInteger:task.taskIdentifier];
-    [self.downloadProgressBlocks removeObjectForKey:dictKey];
-    [self.downloadCompletedBlocks removeObjectForKey:dictKey];
-    [self.downloadsToResume removeObjectForKey:dictKey];
 }
 
 - (void)performDataTaskWithRelativePath:(NSString *)path
