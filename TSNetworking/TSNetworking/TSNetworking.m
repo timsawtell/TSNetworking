@@ -211,7 +211,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
     NSError *parseError = nil;
     if ([firstComponent isEqualToString:@"application"]) {
         if ([secondComponent hasPrefix:@"json"]) {
-            id parsedJson = [NSJSONSerialization JSONObjectWithData:data options:0 error:&parseError];
+            id parsedJson = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:&parseError];
             return parsedJson;
         }
     } else if ([firstComponent isEqualToString:@"text"]) {
