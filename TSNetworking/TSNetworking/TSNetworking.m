@@ -465,7 +465,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         
         // does this file exist?
         NSFileManager *fm = [NSFileManager new];
-        if (![fm fileExistsAtPath:location.path isDirectory:NO]) {
+        if (![fm fileExistsAtPath:location.path isDirectory:nil]) {
             // aint this some shit, it finished without error, but the file is not available at location
             NSString *text = NSLocalizedStringFromTable(@"Unable to locate downloaded file", @"TSNetworking", nil);
             error = [NSError errorWithDomain:NSURLErrorDomain
@@ -479,7 +479,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
         
         // move the file to the programmers destination
         error = nil;
-        if ([fm fileExistsAtPath:destinationPath isDirectory:NO]) {
+        if ([fm fileExistsAtPath:destinationPath isDirectory:nil]) {
             [fm removeItemAtPath:destinationPath error:&error];
         }
         
@@ -547,7 +547,7 @@ typedef void(^URLSessionDownloadTaskCompletion)(NSURL *location, NSError *error)
 #endif
     NSFileManager *fm = [NSFileManager new];
     NSError *error;
-    if (![fm fileExistsAtPath:sourcePath isDirectory:NO]) {
+    if (![fm fileExistsAtPath:sourcePath isDirectory:nil]) {
         // file to be uploaded not found
         NSString *text = NSLocalizedStringFromTable(@"Unable to locate file to upload", @"TSNetworking", nil);
         error = [NSError errorWithDomain:NSURLErrorDomain

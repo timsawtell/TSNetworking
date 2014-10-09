@@ -229,7 +229,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     __block NSFileManager *fm = [NSFileManager new];
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
-        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
+        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:nil], @"resulting file does not exist");
         [fm removeItemAtPath:destinationPath error:nil];
         [weakSelf signalFinished:completed];
     };
@@ -269,7 +269,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     __block NSFileManager *fm = [NSFileManager new];
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
-        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
+        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:nil], @"resulting file does not exist");
         [fm removeItemAtPath:destinationPath error:nil];
         [weakSelf signalFinished:completed];
     };
@@ -278,7 +278,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
         XCTAssertNotNil(error, @"nil error obj");
         NSLog(@"%@", error.localizedDescription);
         XCTAssertEqual(error.code, NSURLErrorCancelled, @"task was not cancelled, it was :%@", error.localizedDescription);
-        if ([fm fileExistsAtPath:destinationPath isDirectory:NO]) {
+        if ([fm fileExistsAtPath:destinationPath isDirectory:nil]) {
             [fm removeItemAtPath:destinationPath error:&error];
         }
         [weakSelf signalFinished:completed];
@@ -480,7 +480,7 @@ NSString * const kMultipartUpload = @"http://localhost:8082/upload";
     __block NSFileManager *fm = [NSFileManager new];
     
     TSNetworkSuccessBlock successBlock = ^(NSObject *resultObject, NSMutableURLRequest *request, NSURLResponse *response) {
-        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:NO], @"resulting file does not exist");
+        XCTAssertTrue([fm fileExistsAtPath:destinationPath isDirectory:nil], @"resulting file does not exist");
         [fm removeItemAtPath:destinationPath error:nil];
         [weakSelf signalFinished:completed];
     };
